@@ -9,35 +9,39 @@ import { SettingsDialog } from "./settings-dialog"
 import { FlowHistoryDialog } from "./flow-history-dialog"
 import { newFlow } from "@/lib/flow-utils"
 import { settings } from "@/lib/settings"
-import { Plus, Settings, FolderOpen, Undo, Redo } from "lucide-react"
+import { Plus, Settings, FolderOpen, Undo, Redo, Users } from "lucide-react"
 import { Button } from "./ui/button"
+import { RoundCreateDialog } from "./round-create-dialog"
 
 export function DebateFlow() {
-  const { flows, selected, setFlows, setSelected, flowsChange, getHistory } = useFlowStore()
+  const {
+    flows,
+    selected,
+    setFlows,
+    setSelected,
+    flowsChange,
+    getHistory,
+    loadFlows,
+    saveFlow,
+    updateFlow: updateFlowInDb,
+    deleteFlow: deleteFlowInDb,
+    loading,
+    currentRoundId, // Get current round
+    setCurrentRoundId,
+    saveDebateRound,
+    loadDebateRounds,
+  } = useFlowStore()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
+  const [roundCreateOpen, setRoundCreateOpen] = useState(false) // Round creation dialog
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
   useEffect(() => {
     settings.init()
-
-    const savedFlows = localStorage.getItem("flows")
-    if (savedFlows) {
-      try {
-        const parsed = JSON.parse(savedFlows)
-        setFlows(parsed)
-      } catch (e) {
-        console.error("Failed to load flows:", e)
-      }
-    }
-  }, [setFlows])
-
-  useEffect(() => {
-    if (flows.length > 0) {
-      localStorage.setItem("flows", JSON.stringify(flows))
-    }
-  }, [flows])
+    loadFlows()
+    loadDebateRounds() // Load debate rounds on mount
+  }, [loadFlows, loadDebateRounds])
 
   useEffect(() => {
     if (flows[selected]) {
@@ -47,40 +51,45 @@ export function DebateFlow() {
     }
   }, [flows, selected, getHistory])
 
-  const addFlow = (type: "primary" | "secondary") => {
+  const createDebateRound = async (
+    roundData: Omit<import("@/lib/types").DebateRound, "id" | "createdAt" | "updatedAt">,
+  ) => {
+    const round: import("@/lib/types").DebateRound = {
+      ...roundData,
+      id: `round-${Date.now()}`,
+    }
+    await saveDebateRound(round)
+    setCurrentRoundId(round.id)
+    // Clear current flows and start fresh for the new round
+    setFlows([])
+    setSelected(0)
+  }
+
+  const addFlow = async (type: "primary" | "secondary") => {
     const debateStyleIndex = settings.data.debateStyle.value as number
     const flow = newFlow(flows.length, type, false, debateStyleIndex)
 
     if (flow) {
-      setFlows([...flows, flow])
+      // Associate flow with current round if one is active
+      if (currentRoundId) {
+        flow.debateRoundId = currentRoundId
+      }
+      await saveFlow(flow)
       setSelected(flows.length)
-      flowsChange()
     }
   }
 
-  const deleteFlow = (index: number) => {
+  const deleteFlow = async (index: number) => {
     const flowId = flows[index].id
     clearHistory(flowId)
-
-    const newFlows = flows.filter((_, i) => i !== index)
-    for (let i = 0; i < newFlows.length; i++) {
-      newFlows[i].index = i
-    }
-    setFlows(newFlows)
-
-    if (index === 0) {
-      setSelected(0)
-    } else {
-      setSelected(index - 1)
-    }
-    flowsChange()
+    await deleteFlowInDb(flowId)
   }
 
-  const updateFlow = (index: number, updates: Partial<(typeof flows)[0]>) => {
+  const updateFlow = async (index: number, updates: Partial<(typeof flows)[0]>) => {
     const newFlows = [...flows]
     newFlows[index] = { ...newFlows[index], ...updates }
     setFlows(newFlows)
-    flowsChange()
+    await updateFlowInDb(newFlows[index])
   }
 
   const handleUndo = () => {
@@ -107,26 +116,37 @@ export function DebateFlow() {
     }
   }
 
-  const archiveFlow = (index: number) => {
+  const archiveFlow = async (index: number) => {
     const newFlows = [...flows]
     newFlows[index] = { ...newFlows[index], archived: !newFlows[index].archived }
     setFlows(newFlows)
-    flowsChange()
+    await updateFlowInDb(newFlows[index])
   }
 
-  const renameFlow = (index: number, newName: string) => {
+  const renameFlow = async (index: number, newName: string) => {
     const newFlows = [...flows]
-    newFlows[index] = { ...newFlows[index], content: newName }
+    newFlows[index] = { ...newFlows[index], name: newName }
     setFlows(newFlows)
-    flowsChange()
+    await updateFlowInDb(newFlows[index])
   }
 
   const sortedFlows = [...flows].sort((a, b) => {
-    if (a.archived === b.archived) return a.index - b.index
+    if (a.archived === b.archived) return (a.index || 0) - (b.index || 0)
     return a.archived ? 1 : -1
   })
 
   const currentFlow = flows[selected]
+
+  if (loading && flows.length === 0) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-[var(--text-weak)]">Loading flows...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -141,11 +161,23 @@ export function DebateFlow() {
             <div className="h-auto pb-[var(--padding)] space-y-2">
               <div className="flex gap-2">
                 <Button
+                  onClick={() => setRoundCreateOpen(true)}
+                  size="sm"
+                  variant="default"
+                  className="flex-1"
+                  title="New Debate Round"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  New Round
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
                   onClick={() => setHistoryDialogOpen(true)}
                   size="sm"
                   variant="outline"
                   className="flex-1"
-                  title="Flow History"
+                  title="Round History"
                 >
                   <FolderOpen className="h-4 w-4" />
                 </Button>
@@ -176,7 +208,7 @@ export function DebateFlow() {
                 </Button>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => addFlow("primary")} size="sm" className="flex-1">
+                <Button onClick={() => addFlow("primary")} size="sm" className="flex-1" disabled={loading}>
                   <Plus className="h-4 w-4 mr-1" />
                   Add Flow
                 </Button>
@@ -190,10 +222,10 @@ export function DebateFlow() {
                     key={flow.id}
                     flow={flow}
                     selected={flow.index === selected}
-                    onClick={() => setSelected(flow.index)}
-                    onRename={(newName) => renameFlow(flow.index, newName)}
-                    onArchive={() => archiveFlow(flow.index)}
-                    onDelete={() => deleteFlow(flow.index)}
+                    onClick={() => setSelected(flow.index || 0)}
+                    onRename={(newName) => renameFlow(flow.index || 0, newName)}
+                    onArchive={() => archiveFlow(flow.index || 0)}
+                    onDelete={() => deleteFlow(flow.index || 0)}
                   />
                 ))}
               </div>
@@ -205,32 +237,15 @@ export function DebateFlow() {
           </div>
 
           {flows.length > 0 && currentFlow ? (
-            <div className="flex flex-col h-full">
-              <div className="flex items-center h-[var(--title-height)] mb-[var(--gap)] space-x-[var(--gap)]">
-                <div className="bg-[var(--background)] rounded-[var(--border-radius)] flex-grow h-full min-w-0 flex items-center px-[var(--padding)]">
-                  <input
-                    type="text"
-                    value={currentFlow.content}
-                    onChange={(e) => updateFlow(selected, { content: e.target.value })}
-                    className="w-full bg-transparent border-none outline-none text-xl font-bold"
-                    placeholder="Flow title"
-                  />
-                  <Button variant="ghost" size="sm" onClick={() => deleteFlow(selected)}>
-                    Delete
-                  </Button>
-                </div>
-              </div>
-
-              <div className="bg-[var(--background)] flex-grow overflow-auto rounded-[var(--border-radius)]">
-                <FlowViewer flow={currentFlow} onUpdate={(updates) => updateFlow(selected, updates)} />
-              </div>
+            <div className="bg-[var(--background)] h-full overflow-auto rounded-[var(--border-radius)]">
+              <FlowViewer flow={currentFlow} onUpdate={(updates) => updateFlow(selected, updates)} />
             </div>
           ) : (
             <div className="flex items-center justify-center h-[var(--main-height)]">
               <div className="text-center">
                 <h2 className="text-2xl font-bold mb-4">No flows yet</h2>
                 <p className="text-[var(--text-weak)] mb-4">Create your first debate flow to get started</p>
-                <Button onClick={() => addFlow("primary")}>
+                <Button onClick={() => addFlow("primary")} disabled={loading}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Flow
                 </Button>
@@ -242,6 +257,7 @@ export function DebateFlow() {
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <FlowHistoryDialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} />
+      <RoundCreateDialog open={roundCreateOpen} onOpenChange={setRoundCreateOpen} onCreateRound={createDebateRound} />
     </>
   )
 }

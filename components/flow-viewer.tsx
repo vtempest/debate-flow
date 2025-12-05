@@ -259,7 +259,7 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
 
   return (
     <>
-      <div ref={containerRef} className="w-full h-full overflow-hidden relative">
+      <div ref={containerRef} className="w-full h-full overflow-y-auto overflow-x-hidden relative">
         {linePositions.map((top, idx) => (
           <div
             key={idx}
@@ -268,7 +268,7 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
           />
         ))}
 
-        <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+        <ResizablePanelGroup direction="horizontal" className="w-full min-h-full">
           {flow.columns.map((columnName, index) => {
             const palette = !!(index % 2) === flow.invert ? "accent" : "accent-secondary"
             const palettePlain = !!(index % 2) === flow.invert ? "plain" : "plain-secondary"
@@ -299,7 +299,7 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
                   </div>
 
                   <div
-                    className={`relative flex-1 palette-${palettePlain} bg-[var(--this-background)] overflow-y-auto overflow-x-hidden pb-[calc(var(--view-height)*0.4)] pt-[var(--padding)]`}
+                    className={`relative min-h-0 palette-${palettePlain} bg-[var(--this-background)] overflow-visible pb-[calc(var(--view-height)*0.4)] pt-[var(--padding)]`}
                   >
                     <div className="relative px-[var(--padding)]">
                       {flow.children.length > 0 ? (

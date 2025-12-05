@@ -1,7 +1,7 @@
 import type { Flow, Box } from "./types"
 import { debateStyles, debateStyleMap } from "./debate-styles"
 
-let flowIdCounter = 0
+const flowIdCounter = 0
 
 export function newBox(index: number, level: number, focus = false): Box {
   return {
@@ -20,7 +20,8 @@ export function newFlow(
   switchSpeakers: boolean,
   debateStyleIndex: number,
 ): Flow | null {
-  const debateStyle = debateStyles[debateStyleMap[debateStyleIndex]]
+  const debateStyleKey = debateStyleMap[debateStyleIndex]
+  const debateStyle = debateStyles[debateStyleKey]
 
   if (type === "secondary" && !debateStyle.secondary) {
     return null
@@ -52,7 +53,9 @@ export function newFlow(
     index,
     lastFocus: [],
     children: starterBoxes,
-    id: flowIdCounter++,
+    id: `flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    name: flowConfig.name,
+    debateStyle: debateStyleKey,
   }
 
   return flow

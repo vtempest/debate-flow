@@ -30,7 +30,7 @@ interface FlowTabProps {
 export function FlowTab({ flow, selected, onClick, onRename, onArchive, onDelete }: FlowTabProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(flow.content || "Untitled Flow")
+  const [editValue, setEditValue] = useState(flow.name || "Untitled Flow")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleRename = () => {
@@ -43,7 +43,7 @@ export function FlowTab({ flow, selected, onClick, onRename, onArchive, onDelete
   }
 
   const handleRenameCancel = () => {
-    setEditValue(flow.content || "Untitled Flow")
+    setEditValue(flow.name || "Untitled Flow")
     setIsEditing(false)
   }
 
@@ -96,7 +96,7 @@ export function FlowTab({ flow, selected, onClick, onRename, onArchive, onDelete
           />
         ) : (
           <span className="flex-1 truncate">
-            {flow.content || "Untitled Flow"}
+            {flow.name || "Untitled Flow"}
             {flow.archived && " (Archived)"}
           </span>
         )}
@@ -133,7 +133,7 @@ export function FlowTab({ flow, selected, onClick, onRename, onArchive, onDelete
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Flow</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{flow.content || "Untitled Flow"}"? This action cannot be undone.
+              Are you sure you want to delete "{flow.name || "Untitled Flow"}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

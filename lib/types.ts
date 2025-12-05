@@ -7,9 +7,12 @@ export type Flow = {
   index: number
   lastFocus: number[]
   children: Box[]
-  id: number
+  id: string
+  name: string
+  debateStyle: string // e.g., "policy", "publicForum", etc.
   speechDocs?: Record<string, string>
   archived?: boolean
+  debateRoundId?: string // Associate flow with a debate round
 }
 
 export type Box = {
@@ -87,4 +90,30 @@ export type SliderSetting = SettingBasic<number> & {
     step: number
     hue?: boolean
   }
+}
+
+export type Speech = {
+  id: string
+  name: string
+  content: string
+  markdown: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type DebateRound = {
+  id: string
+  name: string
+  description?: string
+  debaterAff1?: string
+  debaterAff2?: string
+  debaterNeg1?: string
+  debaterNeg2?: string
+  judgeName?: string
+  flowIds: string[]
+  speechIds: string[]
+  flows?: Flow[]
+  speeches?: Speech[]
+  createdAt?: string
+  updatedAt?: string
 }
