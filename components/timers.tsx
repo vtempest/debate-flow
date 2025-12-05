@@ -7,7 +7,11 @@ import { settings } from "@/lib/settings"
 import { debateStyles, debateStyleMap } from "@/lib/debate-styles"
 import type { TimerState, SpeechTimerState, DebateStyle } from "@/lib/types"
 
-export function Timers() {
+interface TimersProps {
+  compact?: boolean
+}
+
+export function Timers({ compact = false }: TimersProps) {
   const [debateStyleIndex, setDebateStyleIndex] = useState(settings.data.debateStyle.value as number)
   const [debateStyle, setDebateStyle] = useState<DebateStyle>(debateStyles[debateStyleMap[debateStyleIndex]])
 
@@ -72,6 +76,25 @@ export function Timers() {
 
     return unsubscribe
   }, [debateStyleIndex])
+
+  if (compact) {
+    return (
+      <div className="flex items-center justify-center gap-2 overflow-x-auto">
+        <div className="flex-shrink-0">
+          <SpeechTimer
+            speeches={debateStyle.timerSpeeches}
+            resetTimeIndex={speechState.resetTimeIndex}
+            time={speechState.time}
+            state={speechState.state}
+            onResetTimeIndexChange={(index) => setSpeechState((prev) => ({ ...prev, resetTimeIndex: index }))}
+            onTimeChange={(time) => setSpeechState((prev) => ({ ...prev, time }))}
+            onStateChange={(state) => setSpeechState((prev) => ({ ...prev, state }))}
+            compact={true}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-[var(--padding)]">
