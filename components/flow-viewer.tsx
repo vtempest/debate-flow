@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlowBox } from "./flow-box"
 import type { Flow, Box } from "@/lib/types"
-import { Plus, FileText } from "lucide-react"
+import { Plus, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "./ui/button"
 import { useFlowStore } from "@/lib/store"
 import { SpeechDocDialog } from "./speech-doc-dialog"
@@ -13,14 +13,16 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resiz
 interface FlowViewerProps {
   flow: Flow
   onUpdate: (updates: Partial<Flow>) => void
+  isMobile?: boolean
 }
 
-export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
+export function FlowViewer({ flow, onUpdate, isMobile = false }: FlowViewerProps) {
   const { getHistory } = useFlowStore()
   const [speechDocOpen, setSpeechDocOpen] = useState(false)
   const [selectedSpeech, setSelectedSpeech] = useState<string>("")
   const [linePositions, setLinePositions] = useState<number[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const [columnPage, setColumnPage] = useState(0) // For mobile pagination
 
   useEffect(() => {
     const collectPositions = () => {
@@ -257,8 +259,54 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
     childrenCount: flow.children.length,
   })
 
+  // Mobile column pagination
+  const columnsPerPage = 2
+  const totalPages = Math.ceil(flow.columns.length / columnsPerPage)
+  const visibleColumns = isMobile
+    ? flow.columns.slice(columnPage * columnsPerPage, (columnPage + 1) * columnsPerPage)
+    : flow.columns
+
+  const goToPrevPage = () => {
+    if (columnPage > 0) {
+      setColumnPage(columnPage - 1)
+    }
+  }
+
+  const goToNextPage = () => {
+    if (columnPage < totalPages - 1) {
+      setColumnPage(columnPage + 1)
+    }
+  }
+
   return (
     <>
+      {/* Mobile Navigation Arrows */}
+      {isMobile && totalPages > 1 && (
+        <div className="sticky top-0 z-10 bg-[var(--background)] border-b border-border p-2 flex justify-between items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToPrevPage}
+            disabled={columnPage === 0}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <span className="text-sm text-[var(--text-weak)]">
+            Page {columnPage + 1} of {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToNextPage}
+            disabled={columnPage === totalPages - 1}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
+
       <div ref={containerRef} className="w-full h-full overflow-y-auto overflow-x-hidden relative">
         {linePositions.map((top, idx) => (
           <div
@@ -269,15 +317,15 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
         ))}
 
         <ResizablePanelGroup direction="horizontal" className="w-full min-h-full">
-          {flow.columns.map((columnName, index) => {
+          {visibleColumns.map((columnName, visibleIndex) => {
+            const index = isMobile ? columnPage * columnsPerPage + visibleIndex : visibleIndex
             const palette = !!(index % 2) === flow.invert ? "accent" : "accent-secondary"
             const palettePlain = !!(index % 2) === flow.invert ? "plain" : "plain-secondary"
 
             return (
-              <>
+              <React.Fragment key={index}>
                 <ResizablePanel
-                  key={index}
-                  defaultSize={100 / flow.columns.length}
+                  defaultSize={100 / visibleColumns.length}
                   minSize={10}
                   className="relative flex flex-col"
                 >
@@ -342,10 +390,10 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
                   </div>
                 </ResizablePanel>
 
-                {index < flow.columns.length - 1 && (
+                {visibleIndex < visibleColumns.length - 1 && (
                   <ResizableHandle className="w-px bg-border hover:bg-primary hover:w-1 transition-all data-[resize-handle-active]:bg-primary data-[resize-handle-active]:w-1" />
                 )}
-              </>
+              </React.Fragment>
             )
           })}
         </ResizablePanelGroup>

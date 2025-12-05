@@ -15,6 +15,7 @@ interface SpeechTimerProps {
   onTimeChange: (time: number) => void
   onStateChange: (state: SpeechTimerState["state"]) => void
   onFinish?: () => void
+  compact?: boolean
 }
 
 export function SpeechTimer({
@@ -26,6 +27,7 @@ export function SpeechTimer({
   onTimeChange,
   onStateChange,
   onFinish,
+  compact = false,
 }: SpeechTimerProps) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const currentSpeech = speeches[resetTimeIndex]
@@ -103,6 +105,47 @@ export function SpeechTimer({
   const isWarning = time <= 30000 && time > 0
   const isDone = state.name === "done" || time <= 0
   const palette = currentSpeech.secondary ? "accent-secondary" : "accent"
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={prevSpeech} disabled={resetTimeIndex === 0}>
+          <ChevronLeft className="h-3 w-3" />
+        </Button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium">{currentSpeech.name}</span>
+          <span
+            className={cn(
+              "text-lg font-bold tabular-nums",
+              isDone && "text-[var(--text-error)]",
+              isWarning && "text-yellow-600 dark:text-yellow-400",
+            )}
+          >
+            {formatTime(time)}
+          </span>
+        </div>
+
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={toggleTimer}>
+          {state.name === "running" ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+        </Button>
+
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={reset}>
+          <RotateCcw className="h-3 w-3" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={nextSpeech}
+          disabled={resetTimeIndex === speeches.length - 1}
+        >
+          <ChevronRight className="h-3 w-3" />
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div

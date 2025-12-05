@@ -9,9 +9,10 @@ import { SettingsDialog } from "./settings-dialog"
 import { FlowHistoryDialog } from "./flow-history-dialog"
 import { newFlow } from "@/lib/flow-utils"
 import { settings } from "@/lib/settings"
-import { Plus, Settings, FolderOpen, Undo, Redo, Users } from "lucide-react"
+import { Plus, Settings, FolderOpen, Undo, Redo, Users, Menu, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { RoundCreateDialog } from "./round-create-dialog"
+import { useMobile } from "@/lib/hooks/use-mobile"
 
 export function DebateFlow() {
   const {
@@ -36,6 +37,8 @@ export function DebateFlow() {
   const [roundCreateOpen, setRoundCreateOpen] = useState(false) // Round creation dialog
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const isMobile = useMobile()
 
   useEffect(() => {
     settings.init()
@@ -151,13 +154,33 @@ export function DebateFlow() {
   return (
     <>
       <div className="w-screen h-screen overflow-hidden flex flex-col">
+        {/* Hamburger Menu Button for Mobile */}
+        {isMobile && (
+          <div className="fixed top-4 left-4 z-50">
+            <Button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              size="icon"
+              variant="default"
+              className="h-10 w-10 rounded-lg shadow-lg"
+            >
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
+        )}
+
         <div
-          className="grid gap-[var(--gap)] p-[var(--main-margin)] w-full h-full box-border"
+          className={`${isMobile ? "flex flex-col" : "grid gap-[var(--gap)]"} p-[var(--main-margin)] w-full h-full box-border`}
           style={{
-            gridTemplateColumns: flows.length === 0 ? "var(--sidebar-width) auto" : "var(--sidebar-width) 1fr",
+            gridTemplateColumns: !isMobile && (flows.length === 0 ? "var(--sidebar-width) auto" : "var(--sidebar-width) 1fr"),
           }}
         >
-          <div className="bg-[var(--background)] w-full h-[var(--main-height)] rounded-[var(--border-radius)] p-[var(--padding)] flex flex-col box-border">
+          {/* Sidebar */}
+          <div className={`
+            bg-[var(--background)]
+            ${isMobile ? `fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}` : 'w-full h-[var(--main-height)]'}
+            rounded-[var(--border-radius)] p-[var(--padding)] flex flex-col box-border
+            ${isMobile ? 'shadow-xl' : ''}
+          `}>
             <div className="h-auto pb-[var(--padding)] space-y-2">
               <div className="flex gap-2">
                 <Button
@@ -236,23 +259,41 @@ export function DebateFlow() {
             </div>
           </div>
 
-          {flows.length > 0 && currentFlow ? (
-            <div className="bg-[var(--background)] h-full overflow-auto rounded-[var(--border-radius)]">
-              <FlowViewer flow={currentFlow} onUpdate={(updates) => updateFlow(selected, updates)} />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-[var(--main-height)]">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold mb-4">No flows yet</h2>
-                <p className="text-[var(--text-weak)] mb-4">Create your first debate flow to get started</p>
-                <Button onClick={() => addFlow("primary")} disabled={loading}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Flow
-                </Button>
+          {/* Main Content Area */}
+          <div className={`${isMobile ? 'flex-1' : ''} ${isMobile ? 'pb-16' : ''}`}>
+            {flows.length > 0 && currentFlow ? (
+              <div className={`bg-[var(--background)] ${isMobile ? 'h-full' : 'h-full'} overflow-auto rounded-[var(--border-radius)]`}>
+                <FlowViewer flow={currentFlow} onUpdate={(updates) => updateFlow(selected, updates)} isMobile={isMobile} />
               </div>
-            </div>
-          )}
+            ) : (
+              <div className={`flex items-center justify-center ${isMobile ? 'h-full' : 'h-[var(--main-height)]'}`}>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold mb-4">No flows yet</h2>
+                  <p className="text-[var(--text-weak)] mb-4">Create your first debate flow to get started</p>
+                  <Button onClick={() => addFlow("primary")} disabled={loading}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Flow
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Overlay for mobile sidebar */}
+        {isMobile && sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Mobile Timer Bar at Bottom */}
+        {isMobile && (
+          <div className="fixed bottom-0 left-0 right-0 bg-[var(--background)] border-t border-border z-20 p-2">
+            <Timers compact={true} />
+          </div>
+        )}
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

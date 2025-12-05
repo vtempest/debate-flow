@@ -326,3 +326,29 @@
   flex: 1;
   user-select: none;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 256px;
+    --main-margin: 4px;
+    --padding: 6px;
+    --gap: 6px;
+    --font-size: 0.875rem;
+    --column-width: 140px;
+  }
+
+  body {
+    overflow: auto;
+  }
+
+  /* Hide resizable handles on mobile */
+  [data-resize-handle] {
+    display: none;
+  }
+
+  /* Full width columns on mobile */
+  [data-panel] {
+    min-width: 100% !important;
+  }
+}
