@@ -326,3 +326,46 @@
   flex: 1;
   user-select: none;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+    --main-margin: 4px;
+    --padding: 6px;
+    --gap: 4px;
+    --border-radius: 6px;
+    --font-size: 0.85rem;
+    --button-size: 18px;
+  }
+
+  /* Ensure mobile layout uses full width */
+  .w-screen {
+    width: 100vw;
+  }
+
+  /* Adjust heights for mobile header */
+  --main-height: calc(100vh - var(--main-margin) * 2 - 48px);
+
+  /* Make text inputs more mobile-friendly */
+  input[type="text"],
+  textarea {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+
+  /* Adjust column widths for 2-column mobile view */
+  .flow-column {
+    min-width: 50%;
+  }
+
+  /* Make buttons more touch-friendly */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Adjust padding for mobile */
+  .p-\[var\(--padding\)\] {
+    padding: var(--padding);
+  }
+}

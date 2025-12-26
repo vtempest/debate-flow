@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlowBox } from "./flow-box"
 import type { Flow, Box } from "@/lib/types"
-import { Plus, FileText } from "lucide-react"
+import { Plus, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "./ui/button"
 import { useFlowStore } from "@/lib/store"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable"
@@ -19,6 +19,18 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
   const { getHistory } = useFlowStore()
   const [linePositions, setLinePositions] = useState<number[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const [columnOffset, setColumnOffset] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+  const COLUMNS_PER_PAGE = 2
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   useEffect(() => {
     const collectPositions = () => {
@@ -246,9 +258,49 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
     childrenCount: flow.children.length,
   })
 
+  // Calculate visible columns for mobile
+  const visibleColumns = isMobile
+    ? flow.columns.slice(columnOffset, columnOffset + COLUMNS_PER_PAGE)
+    : flow.columns
+
+  const canGoLeft = columnOffset > 0
+  const canGoRight = columnOffset + COLUMNS_PER_PAGE < flow.columns.length
+
+  const handlePrevColumns = () => {
+    setColumnOffset(Math.max(0, columnOffset - COLUMNS_PER_PAGE))
+  }
+
+  const handleNextColumns = () => {
+    setColumnOffset(Math.min(flow.columns.length - COLUMNS_PER_PAGE, columnOffset + COLUMNS_PER_PAGE))
+  }
+
   return (
     <>
       <div ref={containerRef} className="w-full h-full overflow-hidden relative">
+        {/* Mobile navigation buttons */}
+        {isMobile && flow.columns.length > COLUMNS_PER_PAGE && (
+          <div className="absolute top-2 left-0 right-0 z-20 flex justify-between px-2 pointer-events-none">
+            <Button
+              variant="default"
+              size="icon"
+              className="h-8 w-8 rounded-full shadow-lg pointer-events-auto"
+              onClick={handlePrevColumns}
+              disabled={!canGoLeft}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
+              className="h-8 w-8 rounded-full shadow-lg pointer-events-auto"
+              onClick={handleNextColumns}
+              disabled={!canGoRight}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
         {linePositions.map((top, idx) => (
           <div
             key={idx}
@@ -258,7 +310,9 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
         ))}
 
         <ResizablePanelGroup direction="horizontal" className="w-full h-full">
-          {flow.columns.map((columnName, index) => {
+          {visibleColumns.map((columnName, visibleIndex) => {
+            // Calculate the actual index in the full columns array
+            const index = isMobile ? columnOffset + visibleIndex : flow.columns.indexOf(columnName)
             const palette = !!(index % 2) === flow.invert ? "accent" : "accent-secondary"
             const palettePlain = !!(index % 2) === flow.invert ? "plain" : "plain-secondary"
 
@@ -266,7 +320,7 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
               <>
                 <ResizablePanel
                   key={index}
-                  defaultSize={100 / flow.columns.length}
+                  defaultSize={100 / visibleColumns.length}
                   minSize={10}
                   className="relative flex flex-col"
                 >
@@ -331,7 +385,7 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
                   </div>
                 </ResizablePanel>
 
-                {index < flow.columns.length - 1 && (
+                {visibleIndex < visibleColumns.length - 1 && (
                   <ResizableHandle className="w-px bg-border hover:bg-primary hover:w-1 transition-all data-[resize-handle-active]:bg-primary data-[resize-handle-active]:w-1" />
                 )}
               </>
