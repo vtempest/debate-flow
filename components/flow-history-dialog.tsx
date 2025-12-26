@@ -9,6 +9,29 @@ import type { Round } from "@/lib/types"
 import { Clock, FileText, Trash2, ChevronRight, ChevronDown, Users, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+const ROUND_LEVELS = [
+  "Prelim 1",
+  "Prelim 2",
+  "Prelim 3",
+  "Prelim 4",
+  "Prelim 5",
+  "Prelim 6",
+  "Prelim 7",
+  "Prelim 8",
+  "Triple Octafinals",
+  "Double Octafinals",
+  "Octafinals",
+  "Quarterfinals",
+  "Semifinals",
+  "Finals",
+]
+
+// Get the rank of a round level (higher rank = more important, Finals = highest)
+function getRoundLevelRank(roundLevel: string): number {
+  const index = ROUND_LEVELS.indexOf(roundLevel)
+  return index === -1 ? -1 : index
+}
+
 interface FlowHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -168,80 +191,81 @@ export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHisto
                 {rounds.length > 0 ? (
                   <div className="p-2">
                     {rounds
-                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .sort((a, b) => {
+                        // Sort by round level first (Finals highest)
+                        const rankA = getRoundLevelRank(a.roundLevel)
+                        const rankB = getRoundLevelRank(b.roundLevel)
+                        if (rankA !== rankB) {
+                          return rankB - rankA // Higher rank first
+                        }
+                        // Then by timestamp (most recent first)
+                        return b.timestamp - a.timestamp
+                      })
                       .map((round) => {
                         const roundFlows = flows.filter((f) => round.flowIds.includes(f.id))
                         const isExpanded = expandedRounds.has(round.id)
-                        return (
-                          <div key={round.id} className="mb-2 border rounded-md p-2">
-                            <div className="flex items-center gap-2 w-full">
-                              <button
-                                onClick={() => toggleRound(round.id)}
-                                className="flex items-center gap-2 flex-1 p-2 hover:bg-accent rounded-md transition-colors"
-                              >
-                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <Users className="h-4 w-4" />
-                                <div className="flex flex-col items-start">
-                                  <span className="font-semibold">{round.tournamentName}</span>
-                                  <span className="text-xs text-muted-foreground">{round.roundLevel}</span>
-                                </div>
-                                <span className="text-xs text-muted-foreground ml-auto">
-                                  {new Date(round.timestamp).toLocaleDateString()}
-                                </span>
-                              </button>
-                              {onEditRound && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    onEditRound(round.id)
-                                    onOpenChange(false)
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
 
-                            {isExpanded && (
-                              <div className="ml-6 mt-2 space-y-2 text-sm">
-                                <div>
-                                  <span className="font-medium">Affirmative:</span>{" "}
-                                  {round.debaters.aff.join(", ")}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Negative:</span>{" "}
-                                  {round.debaters.neg.join(", ")}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Judges:</span>{" "}
-                                  {round.judges.join(", ")}
-                                </div>
-                                <div className="pt-2">
-                                  <span className="font-medium">Flows:</span>
-                                  <div className="mt-1 space-y-1">
-                                    {roundFlows.map((flow) => (
-                                      <div key={flow.id} className="flex items-center gap-2 p-1 text-xs">
-                                        <FileText className="h-3 w-3" />
-                                        <span>{flow.content}</span>
-                                        {flow.speechNumber && (
-                                          <span className="text-muted-foreground">(Speech {flow.speechNumber})</span>
-                                        )}
-                                      </div>
-                                    ))}
+                        // Format debater names with schools if available
+                        const formatDebater = (email: string, school?: string) => {
+                          const name = email.split('@')[0]
+                          return school ? `${name} (${school})` : name
+                        }
+
+                        return (
+                          <div key={round.id} className="mb-2 border rounded-md overflow-hidden">
+                            <button
+                              onClick={() => handleLoadRoundFlows(round)}
+                              className="w-full p-3 hover:bg-accent transition-colors text-left"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Users className="h-5 w-5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-base">{round.tournamentName}</div>
+                                  <div className="text-sm text-muted-foreground">{round.roundLevel}</div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    <span className="font-medium">Aff:</span>{" "}
+                                    {formatDebater(round.debaters.aff[0], round.schools?.aff[0])},{" "}
+                                    {formatDebater(round.debaters.aff[1], round.schools?.aff[1])}
+                                    {" vs "}
+                                    <span className="font-medium">Neg:</span>{" "}
+                                    {formatDebater(round.debaters.neg[0], round.schools?.neg[0])},{" "}
+                                    {formatDebater(round.debaters.neg[1], round.schools?.neg[1])}
                                   </div>
+                                  {roundFlows.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                      {roundFlows.map((flow) => (
+                                        <span
+                                          key={flow.id}
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-xs"
+                                        >
+                                          <FileText className="h-3 w-3" />
+                                          Speech {flow.speechNumber}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="mt-2"
-                                  onClick={() => handleLoadRoundFlows(round)}
-                                >
-                                  Open Round Flows
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(round.timestamp).toLocaleDateString()}
+                                  </span>
+                                  {onEditRound && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        onEditRound(round.id)
+                                        onOpenChange(false)
+                                      }}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                            )}
+                            </button>
                           </div>
                         )
                       })}
