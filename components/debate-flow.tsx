@@ -7,18 +7,20 @@ import { FlowTab } from "./flow-tab"
 import { Timers } from "./timers"
 import { SettingsDialog } from "./settings-dialog"
 import { FlowHistoryDialog } from "./flow-history-dialog"
+import { RoundDialog } from "./round-dialog"
 import { newFlow } from "@/lib/flow-utils"
 import { settings } from "@/lib/settings"
-import { Plus, Settings, FolderOpen, Undo, Redo, X, Menu, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Settings, FolderOpen, Undo, Redo, X, Menu, ChevronLeft, ChevronRight, Users } from "lucide-react"
 import { Button } from "./ui/button"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable"
 import { Textarea } from "./ui/textarea"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet"
 
 export function DebateFlow() {
-  const { flows, selected, setFlows, setSelected, flowsChange, getHistory } = useFlowStore()
+  const { flows, selected, setFlows, setSelected, flowsChange, getHistory, setRounds, getRounds } = useFlowStore()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
+  const [roundDialogOpen, setRoundDialogOpen] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
   const [speechPanelOpen, setSpeechPanelOpen] = useState(false)
@@ -40,6 +42,16 @@ export function DebateFlow() {
       }
     }
 
+    const savedRounds = localStorage.getItem("rounds")
+    if (savedRounds) {
+      try {
+        const parsed = JSON.parse(savedRounds)
+        setRounds(parsed)
+      } catch (e) {
+        console.error("Failed to load rounds:", e)
+      }
+    }
+
     // Check if mobile on mount and resize
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
@@ -47,7 +59,7 @@ export function DebateFlow() {
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
-  }, [setFlows])
+  }, [setFlows, setRounds])
 
   useEffect(() => {
     if (flows.length > 0) {
@@ -209,6 +221,12 @@ export function DebateFlow() {
           <Button onClick={() => addFlow("primary")} size="sm" className="flex-1">
             <Plus className="h-4 w-4 mr-1" />
             Add Flow
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setRoundDialogOpen(true)} size="sm" variant="outline" className="flex-1">
+            <Users className="h-4 w-4 mr-1" />
+            New Round
           </Button>
         </div>
       </div>
@@ -381,6 +399,7 @@ export function DebateFlow() {
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <FlowHistoryDialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} />
+      <RoundDialog open={roundDialogOpen} onOpenChange={setRoundDialogOpen} />
     </>
   )
 }

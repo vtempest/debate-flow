@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import type { Flow } from "./types"
+import type { Flow, Round } from "./types"
 import { History } from "./history"
 
 const historyMap = new Map<number, History>()
@@ -17,6 +17,7 @@ interface FlowStore {
   flows: Flow[]
   selected: number
   activeMouse: boolean
+  rounds: Round[]
   setFlows: (flows: Flow[]) => void
   setSelected: (selected: number) => void
   setActiveMouse: (active: boolean) => void
@@ -25,12 +26,18 @@ interface FlowStore {
   saveToHistory: (flow: Flow) => void
   getFlowHistory: () => FlowHistory[]
   loadFromHistory: (historyId: string) => void
+  setRounds: (rounds: Round[]) => void
+  createRound: (round: Omit<Round, "id" | "timestamp">) => Round
+  updateRound: (id: number, updates: Partial<Round>) => void
+  deleteRound: (id: number) => void
+  getRounds: () => Round[]
 }
 
 export const useFlowStore = create<FlowStore>((set, get) => ({
   flows: [],
   selected: 0,
   activeMouse: true,
+  rounds: [],
   setFlows: (flows) => set({ flows }),
   setSelected: (selected) => {
     set({ selected })
@@ -96,6 +103,41 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       const newFlow = { ...entry.flow, id: Date.now(), index: flows.length }
       set({ flows: [...flows, newFlow], selected: flows.length })
       get().flowsChange()
+    }
+  },
+  setRounds: (rounds) => {
+    set({ rounds })
+    try {
+      localStorage.setItem("rounds", JSON.stringify(rounds))
+    } catch (error) {
+      console.error("Failed to save rounds:", error)
+    }
+  },
+  createRound: (round) => {
+    const newRound: Round = {
+      ...round,
+      id: Date.now(),
+      timestamp: Date.now(),
+    }
+    const rounds = [...get().rounds, newRound]
+    get().setRounds(rounds)
+    return newRound
+  },
+  updateRound: (id, updates) => {
+    const rounds = get().rounds.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    get().setRounds(rounds)
+  },
+  deleteRound: (id) => {
+    const rounds = get().rounds.filter((r) => r.id !== id)
+    get().setRounds(rounds)
+  },
+  getRounds: () => {
+    try {
+      const storedRounds = localStorage.getItem("rounds")
+      return storedRounds ? JSON.parse(storedRounds) : []
+    } catch (error) {
+      console.error("Failed to load rounds:", error)
+      return []
     }
   },
 }))
