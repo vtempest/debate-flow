@@ -21,6 +21,7 @@ export function DebateFlow() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [roundDialogOpen, setRoundDialogOpen] = useState(false)
+  const [editingRoundId, setEditingRoundId] = useState<number | undefined>(undefined)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
   const [speechPanelOpen, setSpeechPanelOpen] = useState(false)
@@ -135,6 +136,18 @@ export function DebateFlow() {
     }
   }
 
+  const handleEditRound = (roundId: number) => {
+    setEditingRoundId(roundId)
+    setRoundDialogOpen(true)
+  }
+
+  const handleRoundDialogClose = (open: boolean) => {
+    setRoundDialogOpen(open)
+    if (!open) {
+      setEditingRoundId(undefined)
+    }
+  }
+
   const archiveFlow = (index: number) => {
     const newFlows = [...flows]
     newFlows[index] = { ...newFlows[index], archived: !newFlows[index].archived }
@@ -224,7 +237,15 @@ export function DebateFlow() {
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setRoundDialogOpen(true)} size="sm" variant="outline" className="flex-1">
+          <Button
+            onClick={() => {
+              setEditingRoundId(undefined)
+              setRoundDialogOpen(true)
+            }}
+            size="sm"
+            variant="outline"
+            className="flex-1"
+          >
             <Users className="h-4 w-4 mr-1" />
             New Round
           </Button>
@@ -398,8 +419,16 @@ export function DebateFlow() {
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <FlowHistoryDialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} />
-      <RoundDialog open={roundDialogOpen} onOpenChange={setRoundDialogOpen} />
+      <FlowHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        onEditRound={handleEditRound}
+      />
+      <RoundDialog
+        open={roundDialogOpen}
+        onOpenChange={handleRoundDialogClose}
+        roundId={editingRoundId}
+      />
     </>
   )
 }
