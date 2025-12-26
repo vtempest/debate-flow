@@ -9,6 +9,29 @@ import type { Round } from "@/lib/types"
 import { Clock, FileText, Trash2, ChevronRight, ChevronDown, Users, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+const ROUND_LEVELS = [
+  "Prelim 1",
+  "Prelim 2",
+  "Prelim 3",
+  "Prelim 4",
+  "Prelim 5",
+  "Prelim 6",
+  "Prelim 7",
+  "Prelim 8",
+  "Triple Octafinals",
+  "Double Octafinals",
+  "Octafinals",
+  "Quarterfinals",
+  "Semifinals",
+  "Finals",
+]
+
+// Get the rank of a round level (higher rank = more important, Finals = highest)
+function getRoundLevelRank(roundLevel: string): number {
+  const index = ROUND_LEVELS.indexOf(roundLevel)
+  return index === -1 ? -1 : index
+}
+
 interface FlowHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -168,7 +191,16 @@ export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHisto
                 {rounds.length > 0 ? (
                   <div className="p-2">
                     {rounds
-                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .sort((a, b) => {
+                        // Sort by round level first (Finals highest)
+                        const rankA = getRoundLevelRank(a.roundLevel)
+                        const rankB = getRoundLevelRank(b.roundLevel)
+                        if (rankA !== rankB) {
+                          return rankB - rankA // Higher rank first
+                        }
+                        // Then by timestamp (most recent first)
+                        return b.timestamp - a.timestamp
+                      })
                       .map((round) => {
                         const roundFlows = flows.filter((f) => round.flowIds.includes(f.id))
                         const isExpanded = expandedRounds.has(round.id)
