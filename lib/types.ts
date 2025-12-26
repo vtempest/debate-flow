@@ -22,6 +22,10 @@ export type Round = {
     aff: [string, string]
     neg: [string, string]
   }
+  schools?: {
+    aff: [string, string]
+    neg: [string, string]
+  }
   judges: string[]
   flowIds: number[]
   timestamp: number
