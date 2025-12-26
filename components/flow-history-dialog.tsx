@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useFlowStore, type FlowHistory } from "@/lib/store"
 import type { Round } from "@/lib/types"
-import { Clock, FileText, Trash2, ChevronRight, ChevronDown, Users } from "lucide-react"
+import { Clock, FileText, Trash2, ChevronRight, ChevronDown, Users, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface FlowHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onEditRound?: (roundId: number) => void
 }
 
 interface DateGroup {
@@ -20,7 +21,7 @@ interface DateGroup {
   expanded: boolean
 }
 
-export function FlowHistoryDialog({ open, onOpenChange }: FlowHistoryDialogProps) {
+export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHistoryDialogProps) {
   const { getFlowHistory, loadFromHistory, getRounds, flows, setFlows, setSelected } = useFlowStore()
   const [history, setHistory] = useState<FlowHistory[]>([])
   const [rounds, setRounds] = useState<Round[]>([])
@@ -173,17 +174,35 @@ export function FlowHistoryDialog({ open, onOpenChange }: FlowHistoryDialogProps
                         const isExpanded = expandedRounds.has(round.id)
                         return (
                           <div key={round.id} className="mb-2 border rounded-md p-2">
-                            <button
-                              onClick={() => toggleRound(round.id)}
-                              className="flex items-center gap-2 w-full p-2 hover:bg-accent rounded-md transition-colors"
-                            >
-                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              <Users className="h-4 w-4" />
-                              <span className="font-semibold">{round.name}</span>
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {new Date(round.timestamp).toLocaleDateString()}
-                              </span>
-                            </button>
+                            <div className="flex items-center gap-2 w-full">
+                              <button
+                                onClick={() => toggleRound(round.id)}
+                                className="flex items-center gap-2 flex-1 p-2 hover:bg-accent rounded-md transition-colors"
+                              >
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <Users className="h-4 w-4" />
+                                <div className="flex flex-col items-start">
+                                  <span className="font-semibold">{round.tournamentName}</span>
+                                  <span className="text-xs text-muted-foreground">{round.roundLevel}</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground ml-auto">
+                                  {new Date(round.timestamp).toLocaleDateString()}
+                                </span>
+                              </button>
+                              {onEditRound && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    onEditRound(round.id)
+                                    onOpenChange(false)
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
 
                             {isExpanded && (
                               <div className="ml-6 mt-2 space-y-2 text-sm">

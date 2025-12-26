@@ -16,7 +16,8 @@ export type Flow = {
 
 export type Round = {
   id: number
-  name: string
+  tournamentName: string
+  roundLevel: string
   debaters: {
     aff: [string, string]
     neg: [string, string]

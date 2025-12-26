@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -9,13 +9,32 @@ import { useFlowStore } from "@/lib/store"
 import { settings } from "@/lib/settings"
 import type { Flow } from "@/lib/types"
 
+const ROUND_LEVELS = [
+  "Prelim 1",
+  "Prelim 2",
+  "Prelim 3",
+  "Prelim 4",
+  "Prelim 5",
+  "Prelim 6",
+  "Prelim 7",
+  "Prelim 8",
+  "Triple Octafinals",
+  "Double Octafinals",
+  "Octafinals",
+  "Quarterfinals",
+  "Semifinals",
+  "Finals",
+]
+
 interface RoundDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  roundId?: number
 }
 
-export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
-  const [roundName, setRoundName] = useState("")
+export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
+  const [tournamentName, setTournamentName] = useState("")
+  const [roundLevel, setRoundLevel] = useState("Prelim 1")
   const [affDebater1, setAffDebater1] = useState("")
   const [affDebater2, setAffDebater2] = useState("")
   const [negDebater1, setNegDebater1] = useState("")
@@ -24,7 +43,36 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
   const [judge2, setJudge2] = useState("")
   const [judge3, setJudge3] = useState("")
 
-  const { createRound, flows, setFlows } = useFlowStore()
+  const { createRound, updateRound, flows, setFlows, rounds } = useFlowStore()
+
+  // Load round data when editing
+  useEffect(() => {
+    if (roundId && open) {
+      const round = rounds.find((r) => r.id === roundId)
+      if (round) {
+        setTournamentName(round.tournamentName)
+        setRoundLevel(round.roundLevel)
+        setAffDebater1(round.debaters.aff[0])
+        setAffDebater2(round.debaters.aff[1])
+        setNegDebater1(round.debaters.neg[0])
+        setNegDebater2(round.debaters.neg[1])
+        setJudge1(round.judges[0] || "")
+        setJudge2(round.judges[1] || "")
+        setJudge3(round.judges[2] || "")
+      }
+    } else if (!open) {
+      // Reset form when closing
+      setTournamentName("")
+      setRoundLevel("Prelim 1")
+      setAffDebater1("")
+      setAffDebater2("")
+      setNegDebater1("")
+      setNegDebater2("")
+      setJudge1("")
+      setJudge2("")
+      setJudge3("")
+    }
+  }, [roundId, open, rounds])
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true // Empty is okay for optional fields
@@ -33,8 +81,13 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
 
   const handleCreateRound = () => {
     // Validate required fields
-    if (!roundName.trim()) {
-      alert("Please enter a round name")
+    if (!tournamentName.trim()) {
+      alert("Please enter a tournament name")
+      return
+    }
+
+    if (!roundLevel.trim()) {
+      alert("Please select a round level")
       return
     }
 
@@ -60,6 +113,21 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
     // Collect judges (1-3)
     const judges = [judge1, judge2, judge3].filter((j) => j.trim())
 
+    // If editing existing round
+    if (roundId) {
+      updateRound(roundId, {
+        tournamentName,
+        roundLevel,
+        debaters: {
+          aff: [affDebater1, affDebater2],
+          neg: [negDebater1, negDebater2],
+        },
+        judges,
+      })
+      onOpenChange(false)
+      return
+    }
+
     // Get current debate style to create flows
     const debateStyle = settings.data.debateStyle
     const styleConfig = debateStyle.value
@@ -77,7 +145,7 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
       const flowId = Date.now() + index
       const newFlow: Flow = {
         id: flowId,
-        content: `${roundName} - ${speechName}`,
+        content: `${tournamentName} - ${roundLevel} - ${speechName}`,
         level: 0,
         columns: columns,
         invert: primaryFlow.invert,
@@ -103,7 +171,8 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
 
     // Create the round
     const round = createRound({
-      name: roundName,
+      tournamentName,
+      roundLevel,
       debaters: {
         aff: [affDebater1, affDebater2],
         neg: [negDebater1, negDebater2],
@@ -121,7 +190,8 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
     localStorage.setItem("flows", JSON.stringify([...flows, ...updatedFlows]))
 
     // Reset form
-    setRoundName("")
+    setTournamentName("")
+    setRoundLevel("Prelim 1")
     setAffDebater1("")
     setAffDebater2("")
     setNegDebater1("")
@@ -137,19 +207,36 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Round</DialogTitle>
+          <DialogTitle>{roundId ? "Edit Round" : "Create New Round"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Round Name */}
+          {/* Tournament Name */}
           <div className="space-y-2">
-            <Label htmlFor="round-name">Round Name *</Label>
+            <Label htmlFor="tournament-name">Tournament Name *</Label>
             <Input
-              id="round-name"
-              placeholder="e.g., Quarterfinals Round 1"
-              value={roundName}
-              onChange={(e) => setRoundName(e.target.value)}
+              id="tournament-name"
+              placeholder="e.g., Harvard Invitational"
+              value={tournamentName}
+              onChange={(e) => setTournamentName(e.target.value)}
             />
+          </div>
+
+          {/* Round Level */}
+          <div className="space-y-2">
+            <Label htmlFor="round-level">Round Level *</Label>
+            <select
+              id="round-level"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={roundLevel}
+              onChange={(e) => setRoundLevel(e.target.value)}
+            >
+              {ROUND_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Affirmative Debaters */}
@@ -248,7 +335,9 @@ export function RoundDialog({ open, onOpenChange }: RoundDialogProps) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreateRound}>Create Round & Invite</Button>
+          <Button onClick={handleCreateRound}>
+            {roundId ? "Update Round" : "Create Round & Invite"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
