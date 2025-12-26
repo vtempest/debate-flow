@@ -274,6 +274,26 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
     setColumnOffset(Math.min(flow.columns.length - COLUMNS_PER_PAGE, columnOffset + COLUMNS_PER_PAGE))
   }
 
+  const handleColumnTouch = (e: React.TouchEvent, columnIndex: number) => {
+    // Only handle on mobile
+    if (!isMobile) return
+
+    const target = e.target as HTMLElement
+
+    // Don't add if touching a box, button, or interactive element
+    if (
+      target.closest('[data-box]') ||
+      target.closest('button') ||
+      target.closest('textarea') ||
+      target.closest('[contenteditable]')
+    ) {
+      return
+    }
+
+    // Add new cell to the column
+    addEmptyBox(columnIndex)
+  }
+
   return (
     <>
       <div ref={containerRef} className="w-full h-full overflow-hidden relative">
@@ -343,6 +363,7 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
 
                   <div
                     className={`relative flex-1 palette-${palettePlain} bg-[var(--this-background)] overflow-y-auto overflow-x-hidden pb-[calc(var(--view-height)*0.4)] pt-[var(--padding)]`}
+                    onTouchStart={(e) => handleColumnTouch(e, index)}
                   >
                     <div className="relative px-[var(--padding)]">
                       {flow.children.length > 0 ? (

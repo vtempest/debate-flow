@@ -200,6 +200,7 @@ export function FlowBox({
   return (
     <li className="list-none w-full">
       <div
+        data-box="true"
         className={cn("grid gap-0 w-full h-auto overflow-visible items-start group", `palette-${palette}`)}
         style={{ gridTemplateAreas: "'a b'", gridTemplateRows: "min-content" }}
       >
