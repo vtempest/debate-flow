@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFlowStore } from "@/lib/store"
 import { settings } from "@/lib/settings"
 import type { Flow } from "@/lib/types"
@@ -39,10 +40,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
   const [affDebater2, setAffDebater2] = useState("")
   const [negDebater1, setNegDebater1] = useState("")
   const [negDebater2, setNegDebater2] = useState("")
-  const [affSchool1, setAffSchool1] = useState("")
-  const [affSchool2, setAffSchool2] = useState("")
-  const [negSchool1, setNegSchool1] = useState("")
-  const [negSchool2, setNegSchool2] = useState("")
+  const [affSchool, setAffSchool] = useState("")
+  const [negSchool, setNegSchool] = useState("")
   const [judge1, setJudge1] = useState("")
   const [judge2, setJudge2] = useState("")
   const [judge3, setJudge3] = useState("")
@@ -60,10 +59,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
         setAffDebater2(round.debaters.aff[1])
         setNegDebater1(round.debaters.neg[0])
         setNegDebater2(round.debaters.neg[1])
-        setAffSchool1(round.schools?.aff[0] || "")
-        setAffSchool2(round.schools?.aff[1] || "")
-        setNegSchool1(round.schools?.neg[0] || "")
-        setNegSchool2(round.schools?.neg[1] || "")
+        setAffSchool(round.schools?.aff[0] || "")
+        setNegSchool(round.schools?.neg[0] || "")
         setJudge1(round.judges[0] || "")
         setJudge2(round.judges[1] || "")
         setJudge3(round.judges[2] || "")
@@ -76,10 +73,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
       setAffDebater2("")
       setNegDebater1("")
       setNegDebater2("")
-      setAffSchool1("")
-      setAffSchool2("")
-      setNegSchool1("")
-      setNegSchool2("")
+      setAffSchool("")
+      setNegSchool("")
       setJudge1("")
       setJudge2("")
       setJudge3("")
@@ -135,8 +130,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
           neg: [negDebater1, negDebater2],
         },
         schools: {
-          aff: [affSchool1, affSchool2],
-          neg: [negSchool1, negSchool2],
+          aff: [affSchool, affSchool],
+          neg: [negSchool, negSchool],
         },
         judges,
       })
@@ -194,8 +189,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
         neg: [negDebater1, negDebater2],
       },
       schools: {
-        aff: [affSchool1, affSchool2],
-        neg: [negSchool1, negSchool2],
+        aff: [affSchool, affSchool],
+        neg: [negSchool, negSchool],
       },
       judges,
       flowIds: newFlowIds,
@@ -216,10 +211,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
     setAffDebater2("")
     setNegDebater1("")
     setNegDebater2("")
-    setAffSchool1("")
-    setAffSchool2("")
-    setNegSchool1("")
-    setNegSchool2("")
+    setAffSchool("")
+    setNegSchool("")
     setJudge1("")
     setJudge2("")
     setJudge3("")
@@ -235,39 +228,50 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Tournament Name */}
-          <div className="space-y-2">
-            <Label htmlFor="tournament-name">Tournament Name *</Label>
-            <Input
-              id="tournament-name"
-              placeholder="e.g., Harvard Invitational"
-              value={tournamentName}
-              onChange={(e) => setTournamentName(e.target.value)}
-            />
-          </div>
-
-          {/* Round Level */}
-          <div className="space-y-2">
-            <Label htmlFor="round-level">Round Level *</Label>
-            <select
-              id="round-level"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={roundLevel}
-              onChange={(e) => setRoundLevel(e.target.value)}
-            >
-              {ROUND_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Affirmative Debaters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Affirmative Team *</h3>
+          {/* Tournament Name and Round Level */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+              <Label htmlFor="tournament-name">Tournament Name *</Label>
+              <Input
+                id="tournament-name"
+                placeholder="e.g., Harvard Invitational"
+                value={tournamentName}
+                onChange={(e) => setTournamentName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="round-level">Round Level *</Label>
+              <Select value={roundLevel} onValueChange={setRoundLevel}>
+                <SelectTrigger id="round-level">
+                  <SelectValue placeholder="Select round level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROUND_LEVELS.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Teams - Side by Side */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Affirmative Team */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Affirmative Team *</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label htmlFor="aff-school">School (Optional)</Label>
+                  <Input
+                    id="aff-school"
+                    type="text"
+                    placeholder="School Name"
+                    value={affSchool}
+                    onChange={(e) => setAffSchool(e.target.value)}
+                  />
+                </div>
                 <div>
                   <Label htmlFor="aff-debater-1">Debater 1 Email</Label>
                   <Input
@@ -279,18 +283,6 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="aff-school-1">School (Optional)</Label>
-                  <Input
-                    id="aff-school-1"
-                    type="text"
-                    placeholder="School Name"
-                    value={affSchool1}
-                    onChange={(e) => setAffSchool1(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
                   <Label htmlFor="aff-debater-2">Debater 2 Email</Label>
                   <Input
                     id="aff-debater-2"
@@ -300,25 +292,23 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                     onChange={(e) => setAffDebater2(e.target.value)}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="aff-school-2">School (Optional)</Label>
-                  <Input
-                    id="aff-school-2"
-                    type="text"
-                    placeholder="School Name"
-                    value={affSchool2}
-                    onChange={(e) => setAffSchool2(e.target.value)}
-                  />
-                </div>
               </div>
             </div>
-          </div>
 
-          {/* Negative Debaters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Negative Team *</h3>
+            {/* Negative Team */}
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+              <h3 className="text-sm font-semibold">Negative Team *</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label htmlFor="neg-school">School (Optional)</Label>
+                  <Input
+                    id="neg-school"
+                    type="text"
+                    placeholder="School Name"
+                    value={negSchool}
+                    onChange={(e) => setNegSchool(e.target.value)}
+                  />
+                </div>
                 <div>
                   <Label htmlFor="neg-debater-1">Debater 1 Email</Label>
                   <Input
@@ -330,18 +320,6 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="neg-school-1">School (Optional)</Label>
-                  <Input
-                    id="neg-school-1"
-                    type="text"
-                    placeholder="School Name"
-                    value={negSchool1}
-                    onChange={(e) => setNegSchool1(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
                   <Label htmlFor="neg-debater-2">Debater 2 Email</Label>
                   <Input
                     id="neg-debater-2"
@@ -349,16 +327,6 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                     placeholder="debater4@example.com"
                     value={negDebater2}
                     onChange={(e) => setNegDebater2(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="neg-school-2">School (Optional)</Label>
-                  <Input
-                    id="neg-school-2"
-                    type="text"
-                    placeholder="School Name"
-                    value={negSchool2}
-                    onChange={(e) => setNegSchool2(e.target.value)}
                   />
                 </div>
               </div>
