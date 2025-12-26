@@ -9,8 +9,10 @@ import { SettingsDialog } from "./settings-dialog"
 import { FlowHistoryDialog } from "./flow-history-dialog"
 import { newFlow } from "@/lib/flow-utils"
 import { settings } from "@/lib/settings"
-import { Plus, Settings, FolderOpen, Undo, Redo } from "lucide-react"
+import { Plus, Settings, FolderOpen, Undo, Redo, X } from "lucide-react"
 import { Button } from "./ui/button"
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable"
+import { Textarea } from "./ui/textarea"
 
 export function DebateFlow() {
   const { flows, selected, setFlows, setSelected, flowsChange, getHistory } = useFlowStore()
@@ -18,6 +20,9 @@ export function DebateFlow() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+  const [speechPanelOpen, setSpeechPanelOpen] = useState(false)
+  const [selectedSpeech, setSelectedSpeech] = useState<string>("")
+  const [speechContent, setSpeechContent] = useState("")
 
   useEffect(() => {
     settings.init()
@@ -121,6 +126,27 @@ export function DebateFlow() {
     flowsChange()
   }
 
+  const handleOpenSpeechPanel = (speechName: string) => {
+    const currentFlow = flows[selected]
+    if (currentFlow) {
+      setSelectedSpeech(speechName)
+      setSpeechContent(currentFlow.speechDocs?.[speechName] || "")
+      setSpeechPanelOpen(true)
+    }
+  }
+
+  const handleUpdateSpeechDoc = (content: string) => {
+    setSpeechContent(content)
+    if (flows[selected]) {
+      const speechDocs = { ...flows[selected].speechDocs, [selectedSpeech]: content }
+      updateFlow(selected, { speechDocs })
+    }
+  }
+
+  const handleCloseSpeechPanel = () => {
+    setSpeechPanelOpen(false)
+  }
+
   const sortedFlows = [...flows].sort((a, b) => {
     if (a.archived === b.archived) return a.index - b.index
     return a.archived ? 1 : -1
@@ -204,27 +230,59 @@ export function DebateFlow() {
             </div>
           </div>
 
-          {flows.length > 0 && currentFlow ? (
-            <div className="flex flex-col h-full">
-              <div className="flex items-center h-[var(--title-height)] mb-[var(--gap)] space-x-[var(--gap)]">
-                <div className="bg-[var(--background)] rounded-[var(--border-radius)] flex-grow h-full min-w-0 flex items-center px-[var(--padding)]">
-                  <input
-                    type="text"
-                    value={currentFlow.content}
-                    onChange={(e) => updateFlow(selected, { content: e.target.value })}
-                    className="w-full bg-transparent border-none outline-none text-xl font-bold"
-                    placeholder="Flow title"
-                  />
-                  <Button variant="ghost" size="sm" onClick={() => deleteFlow(selected)}>
-                    Delete
-                  </Button>
-                </div>
-              </div>
+{flows.length > 0 && currentFlow ? (
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={speechPanelOpen ? 70 : 100} minSize={30}>
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center h-[var(--title-height)] mb-[var(--gap)] space-x-[var(--gap)]">
+                    <div className="bg-[var(--background)] rounded-[var(--border-radius)] flex-grow h-full min-w-0 flex items-center px-[var(--padding)]">
+                      <input
+                        type="text"
+                        value={currentFlow.content}
+                        onChange={(e) => updateFlow(selected, { content: e.target.value })}
+                        className="w-full bg-transparent border-none outline-none text-xl font-bold"
+                        placeholder="Flow title"
+                      />
+                      <Button variant="ghost" size="sm" onClick={() => deleteFlow(selected)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
 
-              <div className="bg-[var(--background)] flex-grow overflow-auto rounded-[var(--border-radius)]">
-                <FlowViewer flow={currentFlow} onUpdate={(updates) => updateFlow(selected, updates)} />
-              </div>
-            </div>
+                  <div className="bg-[var(--background)] flex-grow overflow-auto rounded-[var(--border-radius)]">
+                    <FlowViewer
+                      flow={currentFlow}
+                      onUpdate={(updates) => updateFlow(selected, updates)}
+                      onOpenSpeechPanel={handleOpenSpeechPanel}
+                    />
+                  </div>
+                </div>
+              </ResizablePanel>
+
+              {speechPanelOpen && (
+                <>
+                  <ResizableHandle className="w-1 bg-border hover:bg-primary transition-colors" />
+                  <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+                    <div className="bg-[var(--background)] h-full rounded-[var(--border-radius)] flex flex-col">
+                      <div className="flex items-center justify-between p-4 border-b border-border">
+                        <h2 className="text-lg font-semibold">{selectedSpeech} - Speech Document</h2>
+                        <Button variant="ghost" size="icon" onClick={handleCloseSpeechPanel}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex-1 p-4 overflow-hidden">
+                        <Textarea
+                          value={speechContent}
+                          onChange={(e) => handleUpdateSpeechDoc(e.target.value)}
+                          placeholder="Write your speech notes here using markdown..."
+                          className="h-full w-full resize-none font-mono"
+                        />
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
           ) : (
             <div className="flex items-center justify-center h-[var(--main-height)]">
               <div className="text-center">
