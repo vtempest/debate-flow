@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlowBox } from "./flow-box"
 import type { Flow, Box } from "@/lib/types"
-import { Plus, FileText } from "lucide-react"
+import { Plus, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "./ui/button"
 import { useFlowStore } from "@/lib/store"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable"
@@ -19,6 +19,7 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
   const { getHistory } = useFlowStore()
   const [linePositions, setLinePositions] = useState<number[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const collectPositions = () => {
@@ -182,6 +183,14 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
     onUpdate({ children: newChildren })
   }
 
+  const scrollColumns = (direction: "left" | "right") => {
+    if (!scrollContainerRef.current) return
+    const scrollAmount = 300
+    const newScrollLeft =
+      scrollContainerRef.current.scrollLeft + (direction === "right" ? scrollAmount : -scrollAmount)
+    scrollContainerRef.current.scrollTo({ left: newScrollLeft, behavior: "smooth" })
+  }
+
 
   const handleNavigate = (currentPath: number[], direction: "up" | "down" | "left" | "right") => {
     let targetPath: number[] | null = null
@@ -248,16 +257,28 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
 
   return (
     <>
-      <div ref={containerRef} className="w-full h-full overflow-hidden relative">
-        {linePositions.map((top, idx) => (
-          <div
-            key={idx}
-            className="absolute left-0 right-0 h-px bg-border/50 z-[1] pointer-events-none"
-            style={{ top: `${top}px` }}
-          />
-        ))}
+      <div className="w-full h-full overflow-hidden relative flex flex-col">
+        <div className="flex items-center gap-2 px-2 py-1 bg-[var(--background)] border-b border-border">
+          <Button variant="ghost" size="icon" onClick={() => scrollColumns("left")} className="h-6 w-6">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-xs text-[var(--text-weak)]">Scroll columns</div>
+          <Button variant="ghost" size="icon" onClick={() => scrollColumns("right")} className="h-6 w-6">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
 
-        <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+        <div ref={scrollContainerRef} className="w-full h-full overflow-x-auto overflow-y-hidden relative">
+          <div ref={containerRef} className="w-full h-full relative">
+            {linePositions.map((top, idx) => (
+              <div
+                key={idx}
+                className="absolute left-0 right-0 h-px bg-border/50 z-[1] pointer-events-none"
+                style={{ top: `${top}px` }}
+              />
+            ))}
+
+            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
           {flow.columns.map((columnName, index) => {
             const palette = !!(index % 2) === flow.invert ? "accent" : "accent-secondary"
             const palettePlain = !!(index % 2) === flow.invert ? "plain" : "plain-secondary"
@@ -288,9 +309,14 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
                   </div>
 
                   <div
-                    className={`relative flex-1 palette-${palettePlain} bg-[var(--this-background)] overflow-y-auto overflow-x-hidden pb-[calc(var(--view-height)*0.4)] pt-[var(--padding)]`}
+                    className={`relative flex-1 palette-${palettePlain} bg-[var(--this-background)] overflow-y-auto overflow-x-hidden pb-[calc(var(--view-height)*0.4)] pt-[var(--padding)] cursor-pointer`}
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget || (e.target as HTMLElement).closest(".column-content-area")) {
+                        addEmptyBox(index)
+                      }
+                    }}
                   >
-                    <div className="relative px-[var(--padding)]">
+                    <div className="relative px-[var(--padding)] column-content-area">
                       {flow.children.length > 0 ? (
                         <ul className="list-none p-0 m-0 w-full">
                           {renderBoxesForColumn(flow.children, index, flow, {
@@ -314,20 +340,6 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
                       )}
                     </div>
 
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-                      <Button
-                        variant="default"
-                        size="icon"
-                        className="h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform opacity-50 hover:opacity-100"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          addEmptyBox(index)
-                        }}
-                        title={`Add box in ${columnName}`}
-                      >
-                        <Plus className="h-5 w-5" />
-                      </Button>
-                    </div>
                   </div>
                 </ResizablePanel>
 
@@ -337,7 +349,9 @@ export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProp
               </>
             )
           })}
-        </ResizablePanelGroup>
+            </ResizablePanelGroup>
+          </div>
+        </div>
       </div>
     </>
   )
