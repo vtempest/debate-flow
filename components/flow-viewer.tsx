@@ -7,18 +7,16 @@ import type { Flow, Box } from "@/lib/types"
 import { Plus, FileText } from "lucide-react"
 import { Button } from "./ui/button"
 import { useFlowStore } from "@/lib/store"
-import { SpeechDocDialog } from "./speech-doc-dialog"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./ui/resizable"
 
 interface FlowViewerProps {
   flow: Flow
   onUpdate: (updates: Partial<Flow>) => void
+  onOpenSpeechPanel: (speechName: string) => void
 }
 
-export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
+export function FlowViewer({ flow, onUpdate, onOpenSpeechPanel }: FlowViewerProps) {
   const { getHistory } = useFlowStore()
-  const [speechDocOpen, setSpeechDocOpen] = useState(false)
-  const [selectedSpeech, setSelectedSpeech] = useState<string>("")
   const [linePositions, setLinePositions] = useState<number[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -184,15 +182,6 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
     onUpdate({ children: newChildren })
   }
 
-  const handleOpenSpeechDoc = (speechName: string) => {
-    setSelectedSpeech(speechName)
-    setSpeechDocOpen(true)
-  }
-
-  const handleUpdateSpeechDoc = (speechName: string, content: string) => {
-    const speechDocs = { ...flow.speechDocs, [speechName]: content }
-    onUpdate({ speechDocs })
-  }
 
   const handleNavigate = (currentPath: number[], direction: "up" | "down" | "left" | "right") => {
     let targetPath: number[] | null = null
@@ -290,7 +279,7 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 opacity-70 hover:opacity-100"
-                        onClick={() => handleOpenSpeechDoc(columnName)}
+                        onClick={() => onOpenSpeechPanel(columnName)}
                         title={`Open document for ${columnName}`}
                       >
                         <FileText className="h-4 w-4" />
@@ -350,14 +339,6 @@ export function FlowViewer({ flow, onUpdate }: FlowViewerProps) {
           })}
         </ResizablePanelGroup>
       </div>
-
-      <SpeechDocDialog
-        open={speechDocOpen}
-        onOpenChange={setSpeechDocOpen}
-        speechName={selectedSpeech}
-        content={flow.speechDocs?.[selectedSpeech] || ""}
-        onUpdate={(content) => handleUpdateSpeechDoc(selectedSpeech, content)}
-      />
     </>
   )
 }
