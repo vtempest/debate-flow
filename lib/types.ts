@@ -10,6 +10,21 @@ export type Flow = {
   id: number
   speechDocs?: Record<string, string>
   archived?: boolean
+  roundId?: number
+  speechNumber?: number
+}
+
+export type Round = {
+  id: number
+  name: string
+  debaters: {
+    aff: [string, string]
+    neg: [string, string]
+  }
+  judges: string[]
+  flowIds: number[]
+  timestamp: number
+  status: "pending" | "active" | "completed"
 }
 
 export type Box = {
