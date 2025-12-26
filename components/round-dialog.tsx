@@ -256,76 +256,79 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
             </div>
           </div>
 
-          {/* Affirmative Debaters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Affirmative Team *</h3>
+          {/* Teams - Side by Side */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Affirmative Team */}
             <div className="space-y-2">
-              <div>
-                <Label htmlFor="aff-school">School (Optional)</Label>
-                <Input
-                  id="aff-school"
-                  type="text"
-                  placeholder="School Name"
-                  value={affSchool}
-                  onChange={(e) => setAffSchool(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="aff-debater-1">Debater 1 Email</Label>
-                <Input
-                  id="aff-debater-1"
-                  type="email"
-                  placeholder="debater1@example.com"
-                  value={affDebater1}
-                  onChange={(e) => setAffDebater1(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="aff-debater-2">Debater 2 Email</Label>
-                <Input
-                  id="aff-debater-2"
-                  type="email"
-                  placeholder="debater2@example.com"
-                  value={affDebater2}
-                  onChange={(e) => setAffDebater2(e.target.value)}
-                />
+              <h3 className="text-sm font-semibold">Affirmative Team *</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label htmlFor="aff-school">School (Optional)</Label>
+                  <Input
+                    id="aff-school"
+                    type="text"
+                    placeholder="School Name"
+                    value={affSchool}
+                    onChange={(e) => setAffSchool(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="aff-debater-1">Debater 1 Email</Label>
+                  <Input
+                    id="aff-debater-1"
+                    type="email"
+                    placeholder="debater1@example.com"
+                    value={affDebater1}
+                    onChange={(e) => setAffDebater1(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="aff-debater-2">Debater 2 Email</Label>
+                  <Input
+                    id="aff-debater-2"
+                    type="email"
+                    placeholder="debater2@example.com"
+                    value={affDebater2}
+                    onChange={(e) => setAffDebater2(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Negative Debaters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Negative Team *</h3>
+            {/* Negative Team */}
             <div className="space-y-2">
-              <div>
-                <Label htmlFor="neg-school">School (Optional)</Label>
-                <Input
-                  id="neg-school"
-                  type="text"
-                  placeholder="School Name"
-                  value={negSchool}
-                  onChange={(e) => setNegSchool(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="neg-debater-1">Debater 1 Email</Label>
-                <Input
-                  id="neg-debater-1"
-                  type="email"
-                  placeholder="debater3@example.com"
-                  value={negDebater1}
-                  onChange={(e) => setNegDebater1(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="neg-debater-2">Debater 2 Email</Label>
-                <Input
-                  id="neg-debater-2"
-                  type="email"
-                  placeholder="debater4@example.com"
-                  value={negDebater2}
-                  onChange={(e) => setNegDebater2(e.target.value)}
-                />
+              <h3 className="text-sm font-semibold">Negative Team *</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label htmlFor="neg-school">School (Optional)</Label>
+                  <Input
+                    id="neg-school"
+                    type="text"
+                    placeholder="School Name"
+                    value={negSchool}
+                    onChange={(e) => setNegSchool(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="neg-debater-1">Debater 1 Email</Label>
+                  <Input
+                    id="neg-debater-1"
+                    type="email"
+                    placeholder="debater3@example.com"
+                    value={negDebater1}
+                    onChange={(e) => setNegDebater1(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="neg-debater-2">Debater 2 Email</Label>
+                  <Input
+                    id="neg-debater-2"
+                    type="email"
+                    placeholder="debater4@example.com"
+                    value={negDebater2}
+                    onChange={(e) => setNegDebater2(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
