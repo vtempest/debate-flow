@@ -6,6 +6,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useFlowStore } from "@/lib/store"
 import { settings } from "@/lib/settings"
 import type { Flow } from "@/lib/types"
@@ -27,6 +31,27 @@ const ROUND_LEVELS = [
   "Finals",
 ]
 
+async function getTournamentNames(): Promise<string[]> {
+  try {
+    const res = await fetch('https://www.tabroom.com/index/index.mhtml', {
+      credentials: 'include',
+    });
+    const html = await res.text();
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const names = Array.from(
+      doc.querySelectorAll('#tournlist tbody tr td:nth-child(2)')
+    ).map(td => td.textContent?.trim() || '').filter(name => name);
+
+    return names;
+  } catch (error) {
+    console.error('Failed to fetch tournament names:', error);
+    return [];
+  }
+}
+
 interface RoundDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -45,8 +70,19 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
   const [judge1, setJudge1] = useState("")
   const [judge2, setJudge2] = useState("")
   const [judge3, setJudge3] = useState("")
+  const [tournamentNames, setTournamentNames] = useState<string[]>([])
+  const [openTournamentCombobox, setOpenTournamentCombobox] = useState(false)
 
   const { createRound, updateRound, flows, setFlows, rounds } = useFlowStore()
+
+  // Fetch tournament names when modal opens
+  useEffect(() => {
+    if (open && tournamentNames.length === 0) {
+      getTournamentNames().then(names => {
+        setTournamentNames(names)
+      })
+    }
+  }, [open, tournamentNames.length])
 
   // Load round data when editing
   useEffect(() => {
@@ -232,12 +268,51 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="tournament-name">Tournament Name *</Label>
-              <Input
-                id="tournament-name"
-                placeholder="e.g., Harvard Invitational"
-                value={tournamentName}
-                onChange={(e) => setTournamentName(e.target.value)}
-              />
+              <Popover open={openTournamentCombobox} onOpenChange={setOpenTournamentCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openTournamentCombobox}
+                    className="w-full justify-between"
+                  >
+                    {tournamentName || "Select tournament..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search tournament..."
+                      value={tournamentName}
+                      onValueChange={setTournamentName}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No tournament found.</CommandEmpty>
+                      <CommandGroup>
+                        {tournamentNames.map((name) => (
+                          <CommandItem
+                            key={name}
+                            value={name}
+                            onSelect={(currentValue) => {
+                              setTournamentName(currentValue)
+                              setOpenTournamentCombobox(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                tournamentName === name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="round-level">Round Level *</Label>
