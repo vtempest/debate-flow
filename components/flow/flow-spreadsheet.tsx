@@ -533,8 +533,6 @@ export function FlowSpreadsheet({ flow, onUpdate, onOpenSpeechPanel }: FlowSprea
                     stopEditingWhenCellsLoseFocus={true}
                     suppressHorizontalScroll={false}
                     domLayout="normal"
-                    // Enable context menu
-                    allowContextMenuWithControlKey={true}
                     // Enable row selection
                     rowSelection="single"
                 />
