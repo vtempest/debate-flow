@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun list:*)",
+      "Bash(bun add:*)",
+      "Bash(pkill:*)",
+      "Bash(bun run build:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}

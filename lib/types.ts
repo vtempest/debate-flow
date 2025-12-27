@@ -9,9 +9,11 @@ export type Flow = {
   children: Box[]
   id: number
   speechDocs?: Record<string, string>
+  sharedSpeeches?: Record<string, { timestamp: number; emails: string[] }>
   archived?: boolean
   roundId?: number
   speechNumber?: number
+  winner?: "aff" | "neg" | "undecided"
 }
 
 export type Round = {
@@ -31,6 +33,7 @@ export type Round = {
   timestamp: number
   status: "pending" | "active" | "completed"
   isPublic?: boolean
+  winner?: "aff" | "neg"
 }
 
 export type Box = {
