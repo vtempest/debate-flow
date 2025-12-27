@@ -28,7 +28,7 @@ export function SpeechDocDialog({ open, onOpenChange, speechName, content, onUpd
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{speechName} - Speech Document</DialogTitle>
+          <DialogTitle>{speechName} </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-hidden">
           <Textarea

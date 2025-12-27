@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useFlowStore, type FlowHistory } from "@/lib/store"
 import type { Round } from "@/lib/types"
-import { Clock, FileText, Trash2, ChevronRight, ChevronDown, Users, Edit } from "lucide-react"
+import { Clock, FileText, Trash2, ChevronRight, ChevronDown, Users, Edit, ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const ROUND_LEVELS = [
@@ -36,6 +36,7 @@ interface FlowHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onEditRound?: (roundId: number) => void
+  onCreateRound?: () => void
 }
 
 interface DateGroup {
@@ -44,7 +45,7 @@ interface DateGroup {
   expanded: boolean
 }
 
-export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHistoryDialogProps) {
+export function FlowHistoryDialog({ open, onOpenChange, onEditRound, onCreateRound }: FlowHistoryDialogProps) {
   const { getFlowHistory, loadFromHistory, getRounds, flows, setFlows, setSelected } = useFlowStore()
   const [history, setHistory] = useState<FlowHistory[]>([])
   const [rounds, setRounds] = useState<Round[]>([])
@@ -116,10 +117,27 @@ export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHisto
 
   const handleLoadRoundFlows = (round: Round) => {
     // Find flows associated with this round
-    const roundFlows = flows.filter((f) => round.flowIds.includes(f.id))
+    const roundFlowIds = round.flowIds
+
+    // Update all flows: un-archive flows for this round, archive others? 
+    // Or just un-archive these? User said "remove all flows belonging to a different round" on creation.
+    // When loading a round, we probably want to mimic that: show ONLY this round's flows.
+
+    const newFlows = flows.map(f => {
+      if (roundFlowIds.includes(f.id)) {
+        return { ...f, archived: false } // Open these
+      } else {
+        return { ...f, archived: true } // Close others
+      }
+    })
+
+    setFlows(newFlows)
+
+    const roundFlows = newFlows.filter((f) => roundFlowIds.includes(f.id))
+
     if (roundFlows.length > 0) {
       // Switch to the first flow of this round
-      const firstFlowIndex = flows.findIndex((f) => f.id === roundFlows[0].id)
+      const firstFlowIndex = newFlows.findIndex((f) => f.id === roundFlows[0].id)
       if (firstFlowIndex !== -1) {
         setSelected(firstFlowIndex)
         onOpenChange(false)
@@ -129,6 +147,11 @@ export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHisto
 
   const handleLoadFlow = () => {
     if (selectedId) {
+      // loadFromHistory (store) adds a COPY of the flow as a new flow. 
+      // So we don't need to manually un-archive, store handles creation.
+      // But we might want to close other flows? 
+      // The snippet assumes loadFromHistory adds to the list.
+      // Let's assume standard behavior for now: just add it.
       loadFromHistory(selectedId)
       onOpenChange(false)
     }
@@ -146,212 +169,140 @@ export function FlowHistoryDialog({ open, onOpenChange, onEditRound }: FlowHisto
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Rounds & History
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Rounds & History
+            </DialogTitle>
+            {onCreateRound && (
+              <Button onClick={() => {
+                onOpenChange(false)
+                onCreateRound()
+              }} size="sm" className="gap-2">
+                <Users className="h-4 w-4" />
+                Create New Round
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {/* Tabs */}
-          <div className="flex gap-2 border-b">
-            <button
-              onClick={() => setActiveTab("rounds")}
-              className={cn(
-                "px-4 py-2 font-medium transition-colors border-b-2",
-                activeTab === "rounds"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Users className="h-4 w-4 inline mr-2" />
-              Rounds ({rounds.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("history")}
-              className={cn(
-                "px-4 py-2 font-medium transition-colors border-b-2",
-                activeTab === "history"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Clock className="h-4 w-4 inline mr-2" />
-              History ({history.length})
-            </button>
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">Recent rounds and flows</p>
           </div>
 
-          {activeTab === "rounds" ? (
-            <>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Debate rounds with participants</p>
-              </div>
+          <ScrollArea className="h-[500px] border rounded-md">
+            {rounds.length > 0 ? (
+              <div className="p-2 space-y-2">
+                {rounds
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .map((round) => {
+                    const roundFlows = flows.filter((f) => round.flowIds.includes(f.id))
 
-              <ScrollArea className="h-[400px] border rounded-md">
-                {rounds.length > 0 ? (
-                  <div className="p-2">
-                    {rounds
-                      .sort((a, b) => {
-                        // Sort by round level first (Finals highest)
-                        const rankA = getRoundLevelRank(a.roundLevel)
-                        const rankB = getRoundLevelRank(b.roundLevel)
-                        if (rankA !== rankB) {
-                          return rankB - rankA // Higher rank first
-                        }
-                        // Then by timestamp (most recent first)
-                        return b.timestamp - a.timestamp
-                      })
-                      .map((round) => {
-                        const roundFlows = flows.filter((f) => round.flowIds.includes(f.id))
-                        const isExpanded = expandedRounds.has(round.id)
+                    // Format debater names with schools if available
+                    const formatDebater = (email: string, school?: string) => {
+                      if (!email) return ""
+                      const name = email.split('@')[0]
+                      return school ? `${name} (${school})` : name
+                    }
 
-                        // Format debater names with schools if available
-                        const formatDebater = (email: string, school?: string) => {
-                          const name = email.split('@')[0]
-                          return school ? `${name} (${school})` : name
-                        }
-
-                        return (
-                          <div key={round.id} className="mb-2 border rounded-md overflow-hidden">
-                            <button
-                              onClick={() => handleLoadRoundFlows(round)}
-                              className="w-full p-3 hover:bg-accent transition-colors text-left"
-                            >
-                              <div className="flex items-center gap-3">
-                                <Users className="h-5 w-5 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-base">{round.tournamentName}</div>
-                                  <div className="text-sm text-muted-foreground">{round.roundLevel}</div>
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    <span className="font-medium">Aff:</span>{" "}
-                                    {formatDebater(round.debaters.aff[0], round.schools?.aff[0])},{" "}
-                                    {formatDebater(round.debaters.aff[1], round.schools?.aff[1])}
-                                    {" vs "}
-                                    <span className="font-medium">Neg:</span>{" "}
-                                    {formatDebater(round.debaters.neg[0], round.schools?.neg[0])},{" "}
-                                    {formatDebater(round.debaters.neg[1], round.schools?.neg[1])}
-                                  </div>
-                                  {roundFlows.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-1">
-                                      {roundFlows.map((flow) => (
-                                        <span
-                                          key={flow.id}
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-xs"
-                                        >
-                                          <FileText className="h-3 w-3" />
-                                          Speech {flow.speechNumber}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(round.timestamp).toLocaleDateString()}
-                                  </span>
-                                  {onEditRound && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        onEditRound(round.id)
-                                        onOpenChange(false)
-                                      }}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </div>
+                    return (
+                      <div key={round.id} className="border rounded-md overflow-hidden bg-card hover:bg-accent/50 transition-colors">
+                        <div className="p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <Users className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                              <div>
+                                <div className="font-semibold text-base">{round.tournamentName}</div>
+                                <div className="text-sm text-muted-foreground">{round.roundLevel}</div>
                               </div>
-                            </button>
-                          </div>
-                        )
-                      })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <div className="text-center p-8">
-                      <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No rounds yet</p>
-                      <p className="text-xs mt-2">Create a round to get started</p>
-                    </div>
-                  </div>
-                )}
-              </ScrollArea>
-            </>
-          ) : (
-            <>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Recently accessed flows (last 50)</p>
-                <Button variant="ghost" size="sm" onClick={handleClearHistory}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear History
-                </Button>
-              </div>
-
-              <ScrollArea className="h-[400px] border rounded-md">
-                {history.length > 0 ? (
-                  <div className="p-2">
-                    {dateGroups.map((group) => (
-                      <div key={group.dateKey} className="mb-2">
-                        <button
-                          onClick={() => toggleDate(group.dateKey)}
-                          className="flex items-center gap-2 w-full p-2 hover:bg-accent rounded-md transition-colors"
-                        >
-                          {group.expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          <span className="font-semibold">{group.dateKey}</span>
-                          <span className="text-sm text-muted-foreground ml-auto">({group.entries.length})</span>
-                        </button>
-
-                        {group.expanded && (
-                          <div className="ml-6 mt-1 space-y-1">
-                            {group.entries.map((entry) => {
-                              const time = new Date(entry.timestamp).toLocaleTimeString("en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                              return (
-                                <button
-                                  key={entry.id}
-                                  onClick={() => setSelectedId(entry.id)}
-                                  className={cn(
-                                    "flex items-center gap-2 w-full p-2 rounded-md transition-colors text-left",
-                                    selectedId === entry.id ? "bg-primary text-primary-foreground" : "hover:bg-accent",
-                                  )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(round.timestamp).toLocaleDateString()}
+                              </span>
+                              {onEditRound && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onEditRound(round.id)
+                                    onOpenChange(false)
+                                  }}
+                                  title="Edit round details"
+                                  className="h-8 w-8 p-0"
                                 >
-                                  <FileText className="h-4 w-4 flex-shrink-0" />
-                                  <span className="flex-1 truncate">{entry.label}</span>
-                                  <span className="text-xs opacity-70 flex-shrink-0">{time}</span>
-                                </button>
-                              )
-                            })}
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleLoadRoundFlows(round)
+                                }}
+                                title="Open Round"
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <div className="text-center p-8">
-                      <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No flow history yet</p>
-                    </div>
-                  </div>
-                )}
-              </ScrollArea>
 
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleLoadFlow} disabled={!selectedId}>
-                  Load Selected Flow
-                </Button>
+                          <div className="mt-2 text-sm text-muted-foreground pl-8">
+                            <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
+                              <span className="font-medium text-blue-500">Aff:</span>
+                              <span className="truncate text-blue-500">
+                                {formatDebater(round.debaters.aff[0], round.schools?.aff[0])}
+                                {round.debaters.aff[1] && `, ${formatDebater(round.debaters.aff[1], round.schools?.aff[1])}`}
+                              </span>
+
+                              <span className="font-medium text-red-500">Neg:</span>
+                              <span className="truncate text-red-500">
+                                {formatDebater(round.debaters.neg[0], round.schools?.neg[0])}
+                                {round.debaters.neg[1] && `, ${formatDebater(round.debaters.neg[1], round.schools?.neg[1])}`}
+                              </span>
+                            </div>
+                          </div>
+
+                          {roundFlows.length > 0 && (
+                            <div className="mt-3 pl-8 flex flex-wrap gap-2">
+                              {roundFlows.map((flow) => (
+                                <button
+                                  key={flow.id}
+                                  onClick={() => {
+                                    const flowIndex = flows.findIndex(f => f.id === flow.id)
+                                    if (flowIndex !== -1) {
+                                      setSelected(flowIndex)
+                                      onOpenChange(false)
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary hover:bg-secondary/80 rounded-full text-xs transition-colors font-medium border"
+                                  title={`Open ${flow.content}`}
+                                >
+                                  <FileText className="h-3 w-3" />
+                                  <span>{flow.content || `Speech ${flow.speechNumber}`}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
               </div>
-            </>
-          )}
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="text-center p-8">
+                  <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No rounds recorded</p>
+                  <p className="text-xs mt-2">Start a new round to see it here</p>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>

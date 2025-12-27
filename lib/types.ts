@@ -30,6 +30,7 @@ export type Round = {
   flowIds: number[]
   timestamp: number
   status: "pending" | "active" | "completed"
+  isPublic?: boolean
 }
 
 export type Box = {

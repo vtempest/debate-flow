@@ -209,6 +209,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: "Merriweather Sans", sans-serif;
@@ -264,16 +265,14 @@
 
 /* Added hue slider styling */
 .hue-slider [role="slider"] {
-  background: linear-gradient(
-    to right,
-    hsl(0, 90%, 60%),
-    hsl(60, 90%, 60%),
-    hsl(120, 90%, 60%),
-    hsl(180, 90%, 60%),
-    hsl(240, 90%, 60%),
-    hsl(300, 90%, 60%),
-    hsl(360, 90%, 60%)
-  );
+  background: linear-gradient(to right,
+      hsl(0, 90%, 60%),
+      hsl(60, 90%, 60%),
+      hsl(120, 90%, 60%),
+      hsl(180, 90%, 60%),
+      hsl(240, 90%, 60%),
+      hsl(300, 90%, 60%),
+      hsl(360, 90%, 60%));
 }
 
 /* Added custom styling for react-complex-tree to match app design */
@@ -337,6 +336,8 @@
     --border-radius: 6px;
     --font-size: 0.85rem;
     --button-size: 18px;
+    /* Adjust heights for mobile header */
+    --main-height: calc(100vh - var(--main-margin) * 2 - 48px);
   }
 
   /* Ensure mobile layout uses full width */
@@ -344,13 +345,11 @@
     width: 100vw;
   }
 
-  /* Adjust heights for mobile header */
-  --main-height: calc(100vh - var(--main-margin) * 2 - 48px);
-
   /* Make text inputs more mobile-friendly */
   input[type="text"],
   textarea {
-    font-size: 16px !important; /* Prevents zoom on iOS */
+    font-size: 16px !important;
+    /* Prevents zoom on iOS */
   }
 
   /* Adjust column widths for 2-column mobile view */

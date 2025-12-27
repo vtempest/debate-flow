@@ -1,14 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
+import { Plus, Minus, Lock, Globe } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useFlowStore } from "@/lib/store"
 import { settings } from "@/lib/settings"
-import type { Flow } from "@/lib/types"
+import type { Flow, Box } from "@/lib/types"
+import { getTournamentNames } from "@/app/actions"
+import { debateStyles, debateStyleMap } from "@/lib/debate-styles"
 
 const ROUND_LEVELS = [
   "Prelim 1",
@@ -19,11 +24,11 @@ const ROUND_LEVELS = [
   "Prelim 6",
   "Prelim 7",
   "Prelim 8",
-  "Triple Octafinals",
-  "Double Octafinals",
-  "Octafinals",
-  "Quarterfinals",
-  "Semifinals",
+  "Triples",
+  "Doubles",
+  "Octas",
+  "Quarters",
+  "Semis",
   "Finals",
 ]
 
@@ -35,6 +40,7 @@ interface RoundDialogProps {
 
 export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
   const [tournamentName, setTournamentName] = useState("")
+  const [tournamentSuggestions, setTournamentSuggestions] = useState<string[]>([])
   const [roundLevel, setRoundLevel] = useState("Prelim 1")
   const [affDebater1, setAffDebater1] = useState("")
   const [affDebater2, setAffDebater2] = useState("")
@@ -42,9 +48,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
   const [negDebater2, setNegDebater2] = useState("")
   const [affSchool, setAffSchool] = useState("")
   const [negSchool, setNegSchool] = useState("")
-  const [judge1, setJudge1] = useState("")
-  const [judge2, setJudge2] = useState("")
-  const [judge3, setJudge3] = useState("")
+  const [judgeEmails, setJudgeEmails] = useState<string[]>([""])
+  const [isPublic, setIsPublic] = useState(false)
 
   const { createRound, updateRound, flows, setFlows, rounds } = useFlowStore()
 
@@ -61,9 +66,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
         setNegDebater2(round.debaters.neg[1])
         setAffSchool(round.schools?.aff[0] || "")
         setNegSchool(round.schools?.neg[0] || "")
-        setJudge1(round.judges[0] || "")
-        setJudge2(round.judges[1] || "")
-        setJudge3(round.judges[2] || "")
+        setJudgeEmails(round.judges.length > 0 ? round.judges : [""])
+        setIsPublic(round.isPublic || false)
       }
     } else if (!open) {
       // Reset form when closing
@@ -75,11 +79,19 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
       setNegDebater2("")
       setAffSchool("")
       setNegSchool("")
-      setJudge1("")
-      setJudge2("")
-      setJudge3("")
+      setJudgeEmails([""])
+      setIsPublic(false)
     }
   }, [roundId, open, rounds])
+
+  useEffect(() => {
+    if (open) {
+      getTournamentNames().then((names) => {
+        console.log("Tournament suggestions:", names)
+        setTournamentSuggestions(names)
+      })
+    }
+  }, [open])
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true // Empty is okay for optional fields
@@ -98,18 +110,18 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
       return
     }
 
-    if (!affDebater1 || !affDebater2 || !negDebater1 || !negDebater2) {
-      alert("Please enter emails for all debaters (2 per side)")
+    if (!affDebater1 || !negDebater1) {
+      alert("Please enter emails for at least one debater per side")
       return
     }
 
-    if (!judge1) {
+    if (!judgeEmails[0]?.trim()) {
       alert("Please enter at least one judge email")
       return
     }
 
     // Validate email formats
-    const emails = [affDebater1, affDebater2, negDebater1, negDebater2, judge1, judge2, judge3]
+    const emails = [affDebater1, affDebater2, negDebater1, negDebater2, ...judgeEmails]
     for (const email of emails) {
       if (email && !validateEmail(email)) {
         alert(`Invalid email format: ${email}`)
@@ -117,8 +129,8 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
       }
     }
 
-    // Collect judges (1-3)
-    const judges = [judge1, judge2, judge3].filter((j) => j.trim())
+    // Collect judges (filter empty)
+    const judges = judgeEmails.filter((j) => j.trim())
 
     // If editing existing round
     if (roundId) {
@@ -134,14 +146,17 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
           neg: [negSchool, negSchool],
         },
         judges,
+        isPublic,
       })
       onOpenChange(false)
       return
     }
 
     // Get current debate style to create flows
-    const debateStyle = settings.data.debateStyle
-    const styleConfig = debateStyle.value
+    const debateStyleSetting = settings.data.debateStyle
+    const styleIndex = debateStyleSetting.value as number
+    const styleKey = debateStyleMap[styleIndex]
+    const styleConfig = debateStyles[styleKey]
 
     // Create flows for each speech in the debate style
     const newFlows: Flow[] = []
@@ -152,7 +167,10 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
     const columns = primaryFlow.columns
 
     // Create a flow for each speech (each column represents a speech)
-    columns.forEach((speechName, index) => {
+    // Only create the first flow initially as per user request
+    const firstColumn = columns.slice(0, 1)
+
+    firstColumn.forEach((speechName, index) => {
       const flowId = Date.now() + index
       const newFlow: Flow = {
         id: flowId,
@@ -163,15 +181,45 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
         focus: false,
         index: flows.length + index,
         lastFocus: [],
-        children: primaryFlow.starterBoxes
-          ? primaryFlow.starterBoxes.map((content, idx) => ({
-              content,
-              children: [],
-              index: idx,
-              level: 1,
-              focus: false,
-            }))
-          : [],
+        children: (() => {
+          const rows: Box[] = []
+          if (!primaryFlow.starterBoxes) {
+            // Create 100 empty rows
+            for (let r = 0; r < 100; r++) {
+              const rootBox: Box = {
+                content: "",
+                children: [],
+                index: r,
+                level: 1,
+                focus: false,
+                empty: columns.length > 1,
+              }
+              rows.push(rootBox)
+
+              let currentBox = rootBox
+              for (let c = 1; c < columns.length; c++) {
+                const childBox: Box = {
+                  content: "",
+                  children: [],
+                  index: 0,
+                  level: c + 1,
+                  focus: false,
+                  empty: c < columns.length - 1,
+                }
+                currentBox.children.push(childBox)
+                currentBox = childBox
+              }
+            }
+            return rows
+          }
+          return primaryFlow.starterBoxes.map((content, idx) => ({
+            content,
+            children: [],
+            index: idx,
+            level: 1,
+            focus: false,
+          }))
+        })(),
         speechDocs: {},
         archived: false,
         speechNumber: index + 1,
@@ -195,14 +243,21 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
       judges,
       flowIds: newFlowIds,
       status: "active",
+      isPublic,
     })
+
+    // Archive all existing flows to "close" them from the workspace
+    const archivedFlows = flows.map(f => ({ ...f, archived: true }))
 
     // Associate flows with the round
     const updatedFlows = newFlows.map((flow) => ({ ...flow, roundId: round.id }))
-    setFlows([...flows, ...updatedFlows])
+
+    // Combine archived old flows with new active flows
+    const finalFlows = [...archivedFlows, ...updatedFlows]
+    setFlows(finalFlows)
 
     // Save flows to localStorage
-    localStorage.setItem("flows", JSON.stringify([...flows, ...updatedFlows]))
+    localStorage.setItem("flows", JSON.stringify(finalFlows))
 
     // Reset form
     setTournamentName("")
@@ -213,9 +268,7 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
     setNegDebater2("")
     setAffSchool("")
     setNegSchool("")
-    setJudge1("")
-    setJudge2("")
-    setJudge3("")
+    setJudgeEmails([""])
 
     onOpenChange(false)
   }
@@ -224,22 +277,32 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{roundId ? "Edit Round" : "Create New Round"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Image src="/icon-rounds.svg" alt="Rounds" width={64} height={64} />
+            {roundId ? "Edit Round" : "Create New Round"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Tournament Name and Round Level */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          {/* Tournament Name and Round Level */}
+          <div className="grid grid-cols-4 gap-4 items-end">
+            <div className="col-span-2 space-y-3">
               <Label htmlFor="tournament-name">Tournament Name *</Label>
               <Input
                 id="tournament-name"
+                list="tournament-suggestions"
                 placeholder="e.g., Harvard Invitational"
                 value={tournamentName}
                 onChange={(e) => setTournamentName(e.target.value)}
               />
+              <datalist id="tournament-suggestions">
+                {tournamentSuggestions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="round-level">Round Level *</Label>
               <Select value={roundLevel} onValueChange={setRoundLevel}>
                 <SelectTrigger id="round-level">
@@ -254,13 +317,28 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-3 flex flex-col items-center pb-2">
+              <Label htmlFor="visibility-toggle" className="text-xs text-muted-foreground mb-1">
+                {isPublic ? "Public" : "Private"}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Lock className={`h-4 w-4 ${!isPublic ? "text-primary" : "text-muted-foreground"}`} />
+                <Switch
+                  id="visibility-toggle"
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Teams - Side by Side */}
           <div className="grid grid-cols-2 gap-4">
             {/* Affirmative Team */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold">Affirmative Team *</h3>
+              <h3 className="text-sm font-semibold text-blue-500">Affirmative Team</h3>
               <div className="space-y-2">
                 <div>
                   <Label htmlFor="aff-school">School (Optional)</Label>
@@ -273,7 +351,7 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="aff-debater-1">Debater 1 Email</Label>
+                  <Label htmlFor="aff-debater-1">1A Email</Label>
                   <Input
                     id="aff-debater-1"
                     type="email"
@@ -283,7 +361,7 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="aff-debater-2">Debater 2 Email</Label>
+                  <Label htmlFor="aff-debater-2"> 2A Email (Optional)</Label>
                   <Input
                     id="aff-debater-2"
                     type="email"
@@ -297,7 +375,7 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
 
             {/* Negative Team */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold">Negative Team *</h3>
+              <h3 className="text-sm font-semibold text-red-500">Negative Team</h3>
               <div className="space-y-2">
                 <div>
                   <Label htmlFor="neg-school">School (Optional)</Label>
@@ -310,7 +388,7 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="neg-debater-1">Debater 1 Email</Label>
+                  <Label htmlFor="neg-debater-1">1N Email</Label>
                   <Input
                     id="neg-debater-1"
                     type="email"
@@ -320,7 +398,7 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="neg-debater-2">Debater 2 Email</Label>
+                  <Label htmlFor="neg-debater-2">2N Email (Optional)</Label>
                   <Input
                     id="neg-debater-2"
                     type="email"
@@ -335,51 +413,65 @@ export function RoundDialog({ open, onOpenChange, roundId }: RoundDialogProps) {
 
           {/* Judges */}
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Judges (1-3 required) *</h3>
-            <div className="space-y-2">
-              <div>
-                <Label htmlFor="judge-1">Judge 1 Email</Label>
-                <Input
-                  id="judge-1"
-                  type="email"
-                  placeholder="judge1@example.com"
-                  value={judge1}
-                  onChange={(e) => setJudge1(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="judge-2">Judge 2 Email (Optional)</Label>
-                <Input
-                  id="judge-2"
-                  type="email"
-                  placeholder="judge2@example.com"
-                  value={judge2}
-                  onChange={(e) => setJudge2(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="judge-3">Judge 3 Email (Optional)</Label>
-                <Input
-                  id="judge-3"
-                  type="email"
-                  placeholder="judge3@example.com"
-                  value={judge3}
-                  onChange={(e) => setJudge3(e.target.value)}
-                />
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">Judges</h3>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setJudgeEmails([...judgeEmails, ""])}
+                  title="Add Judge"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                {judgeEmails.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      if (judgeEmails.length > 1) {
+                        setJudgeEmails(judgeEmails.slice(0, -1))
+                      }
+                    }}
+                    title="Remove Judge"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
+            <div className="space-y-2">
+              {judgeEmails.map((email, index) => (
+                <div key={index}>
+                  <Label htmlFor={`judge-${index}`}>Judge {index + 1} Email</Label>
+                  <Input
+                    id={`judge-${index}`}
+                    type="email"
+                    placeholder={`judge${index + 1}@example.com`}
+                    value={email}
+                    onChange={(e) => {
+                      const newEmails = [...judgeEmails]
+                      newEmails[index] = e.target.value
+                      setJudgeEmails(newEmails)
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Create Button */}
+          <div className="pt-4 pb-2">
+            <Button onClick={handleCreateRound} className="w-full" size="lg">
+              {roundId ? "Update Round" : "Create Round & Invite"}
+            </Button>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleCreateRound}>
-            {roundId ? "Update Round" : "Create Round & Invite"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   )
 }

@@ -1,7 +1,7 @@
 import type { Flow, Box } from "./types"
 import { debateStyles, debateStyleMap } from "./debate-styles"
 
-let flowIdCounter = 0
+
 
 export function newBox(index: number, level: number, focus = false): Box {
   return {
@@ -30,17 +30,41 @@ export function newFlow(
   const columns = switchSpeakers && flowConfig.columnsSwitch ? flowConfig.columnsSwitch : flowConfig.columns
 
   const starterBoxes: Box[] = []
-  if (flowConfig.starterBoxes) {
-    flowConfig.starterBoxes.forEach((content, i) => {
-      starterBoxes.push({
-        content,
+
+  // Create 100 chains of empty boxes, one for each "row"
+  const INITIAL_ROWS = 100
+  if (columns.length > 0) {
+    for (let r = 0; r < INITIAL_ROWS; r++) {
+      let currentChildren = starterBoxes
+      const rootIndex = r
+
+      // Create the root box for this row (Column 1)
+      const rootBox: Box = {
+        content: "",
         children: [],
-        index: i,
+        index: rootIndex,
         level: 1,
         focus: false,
-        empty: false,
-      })
-    })
+        empty: columns.length > 1, // Empty if it has children
+      }
+      starterBoxes.push(rootBox)
+
+      // If there are more columns, chain them
+      let currentBox = rootBox
+      for (let c = 1; c < columns.length; c++) {
+        const isLast = c === columns.length - 1
+        const childBox: Box = {
+          content: "",
+          children: [],
+          index: 0, // In this chain, it's the only child
+          level: c + 1,
+          focus: false,
+          empty: !isLast,
+        }
+        currentBox.children.push(childBox)
+        currentBox = childBox
+      }
+    }
   }
 
   const flow: Flow = {
@@ -52,7 +76,7 @@ export function newFlow(
     index,
     lastFocus: [],
     children: starterBoxes,
-    id: flowIdCounter++,
+    id: Date.now() + Math.floor(Math.random() * 1000),
   }
 
   return flow

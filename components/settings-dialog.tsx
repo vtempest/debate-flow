@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { settings, settingsGroups } from "@/lib/settings"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
@@ -111,6 +112,57 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
                 if (setting.type === "radio") {
                   const radioSetting = setting as RadioSetting
+
+                  // Special case for debateStyle to use Select
+                  if (key === "debateStyle") {
+                    return (
+                      <div key={key} className="space-y-2">
+                        <Label htmlFor={key}>{setting.name}</Label>
+                        {setting.info && <p className="text-sm text-muted-foreground">{setting.info}</p>}
+                        <Select
+                          value={radioSetting.value.toString()}
+                          onValueChange={(value) => handleRadioChange(key, value)}
+                        >
+                          <SelectTrigger id={key} className="w-full">
+                            <SelectValue placeholder="Select debate style" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {radioSetting.detail.options.map((option, index) => (
+                              <SelectItem key={index} value={index.toString()}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )
+                  }
+
+                  // Special case for fontSize to use Select
+                  if (key === "fontSize") {
+                    return (
+                      <div key={key} className="space-y-2">
+                        <Label htmlFor={key}>{setting.name}</Label>
+                        {setting.info && <p className="text-sm text-muted-foreground">{setting.info}</p>}
+                        <Select
+                          value={radioSetting.value.toString()}
+                          onValueChange={(value) => handleRadioChange(key, value)}
+                        >
+                          <SelectTrigger id={key} className="w-full">
+                            <SelectValue placeholder="Select font size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {radioSetting.detail.options.map((option, index) => (
+                              <SelectItem key={index} value={index.toString()}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )
+                  }
+
                   return (
                     <div key={key} className="space-y-2">
                       <Label>{setting.name}</Label>

@@ -95,95 +95,28 @@ export const settings = new Settings({
       options: [
         "Policy",
         "Public Forum",
-        "Lincoln Douglas",
+        "Lincoln Douglas", //1
         "Congress",
         "College Policy",
-        "World Schools",
+        "World Schools", //3
         "Big Questions",
-        "NOF SPAR",
+        "NOF SPAR", //1
         "Parli",
       ],
     },
     info: "Already created flows won't be affected by this setting",
   },
-  colorTheme: {
-    name: "Color theme",
-    type: "radio",
-    value: 0,
-    auto: 0,
-    detail: {
-      options: ["System default", "Light theme", "Dark theme"],
-    },
-  },
-  columnWidth: {
-    name: "Column width",
-    type: "slider",
-    value: 150,
-    auto: 150,
-    detail: { min: 50, max: 300, step: 1 },
-  },
-  accentHue: {
-    name: "Primary color hue",
-    type: "slider",
-    value: 192,
-    auto: 192,
-    detail: { min: 0, max: 360, step: 1, hue: true },
-    info: "This color will be used for aff",
-  },
-  accentSecondaryHue: {
-    name: "Secondary color hue",
-    type: "slider",
-    value: 26,
-    auto: 26,
-    detail: { min: 0, max: 360, step: 1, hue: true },
-    info: "This color will be used for neg",
-  },
-  transitionSpeed: {
-    name: "Transition duration",
-    type: "slider",
-    value: 300,
-    auto: 300,
-    detail: { min: 0, max: 1000, step: 1 },
-  },
   fontSize: {
     name: "Font size",
-    type: "slider",
-    value: 0.9,
-    auto: 0.9,
-    detail: { min: 0.2, max: 2, step: 0.01 },
-  },
-  fontWeight: {
-    name: "Font weight",
-    type: "slider",
-    value: 300,
-    auto: 300,
-    detail: { min: 100, max: 900, step: 50 },
-  },
-  borderRadius: {
-    name: "Border radius",
-    type: "slider",
-    value: 8,
-    auto: 8,
-    detail: { min: 0, max: 30, step: 1 },
-  },
-  padding: {
-    name: "Padding",
-    value: 8,
-    auto: 8,
-    type: "slider",
-    detail: { min: 0, max: 30, step: 1 },
-  },
-  gap: {
-    name: "Grid gap",
-    value: 8,
-    auto: 8,
-    type: "slider",
-    detail: { min: 0, max: 30, step: 1 },
+    type: "radio",
+    value: 14,
+    auto: 14,
+    detail: {
+      options: ["12px", "13px", "14px", "15px", "16px", "18px", "20px"],
+    },
   },
 })
 
 export const settingsGroups = [
-  { name: "General", settings: ["debateStyle"] },
-  { name: "Appearance", settings: ["columnWidth", "accentHue", "accentSecondaryHue"] },
-  { name: "Font", settings: ["fontSize", "fontWeight"] },
+  { name: "General", settings: ["debateStyle", "fontSize"] },
 ]

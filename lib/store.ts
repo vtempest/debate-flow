@@ -21,7 +21,7 @@ interface FlowStore {
   setFlows: (flows: Flow[]) => void
   setSelected: (selected: number) => void
   setActiveMouse: (active: boolean) => void
-  flowsChange: () => void
+  flowsChange: (saveToHistory?: boolean) => void
   getHistory: (flowId: number) => History
   saveToHistory: (flow: Flow) => void
   getFlowHistory: () => FlowHistory[]
@@ -47,10 +47,10 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
   },
   setActiveMouse: (activeMouse) => set({ activeMouse }),
-  flowsChange: () => {
-    set((state) => ({ flows: [...state.flows] }))
+  flowsChange: (saveToHistory = true) => {
+    // Only save to history, don't trigger re-renders
     const current = get().flows[get().selected]
-    if (current) {
+    if (current && saveToHistory) {
       get().saveToHistory(current)
     }
   },
@@ -102,7 +102,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       const flows = get().flows
       const newFlow = { ...entry.flow, id: Date.now(), index: flows.length }
       set({ flows: [...flows, newFlow], selected: flows.length })
-      get().flowsChange()
+      get().flowsChange(true)
     }
   },
   setRounds: (rounds) => {
