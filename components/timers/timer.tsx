@@ -59,7 +59,7 @@ export function Timer({ resetTime, time, state, palette = "accent", onTimeChange
   }, [state, resetTime, onTimeChange, onStateChange])
 
   const toggleTimer = () => {
-    playSoundEffect("bloop")
+    playSoundEffect("boop")
     if (state.name === "paused") {
       onStateChange({ name: "running", startTime: Date.now() - (resetTime - time) })
     } else if (state.name === "running") {
