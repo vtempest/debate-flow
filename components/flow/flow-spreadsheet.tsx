@@ -311,11 +311,71 @@ export function FlowSpreadsheet({ flow, onUpdate, onOpenSpeechPanel }: FlowSprea
         gridRef.current.api.ensureColumnVisible(columnId)
     }, [currentColumnIndex, flow.columns.length])
 
-    // Handle Tab key for indenting
+    // Handle Tab key for indenting and Arrow keys for Excel-style navigation
     const onCellKeyDown = useCallback((event: CellKeyDownEvent) => {
-        const { event: keyEvent, node, api } = event
+        const { event: keyEvent, node, api, column } = event
 
-        if (keyEvent instanceof KeyboardEvent && keyEvent.key === 'Tab' && node?.data) {
+        if (!(keyEvent instanceof KeyboardEvent)) return
+
+        const key = keyEvent.key
+        const isArrow = key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight'
+
+        // Handle Excel-style arrow key navigation while editing
+        if (isArrow && node && column) {
+            const editingCells = api.getEditingCells()
+            const isEditing = editingCells.length > 0
+
+            if (isEditing) {
+                keyEvent.preventDefault()
+                keyEvent.stopPropagation()
+
+                const rowIndex = node.rowIndex
+                const colId = column.getColId()
+
+                // Commit current edit
+                api.stopEditing()
+
+                // Compute next cell position
+                let nextRow = rowIndex
+                let nextCol = colId
+
+                if (key === 'ArrowDown') {
+                    const nextNode = api.getDisplayedRowAtIndex(rowIndex! + 1)
+                    if (nextNode) nextRow = rowIndex! + 1
+                }
+                if (key === 'ArrowUp') {
+                    if (rowIndex! > 0) nextRow = rowIndex! - 1
+                }
+                if (key === 'ArrowRight') {
+                    const allCols = api.getAllDisplayedColumns()
+                    const currentIdx = allCols.findIndex(c => c.getColId() === colId)
+                    if (currentIdx >= 0 && currentIdx < allCols.length - 1) {
+                        nextCol = allCols[currentIdx + 1].getColId()
+                    }
+                }
+                if (key === 'ArrowLeft') {
+                    const allCols = api.getAllDisplayedColumns()
+                    const currentIdx = allCols.findIndex(c => c.getColId() === colId)
+                    if (currentIdx > 0) {
+                        nextCol = allCols[currentIdx - 1].getColId()
+                    }
+                }
+
+                // Move focus to next cell
+                api.setFocusedCell(nextRow!, nextCol)
+
+                // Auto-start editing the next cell for Excel-like experience
+                api.startEditingCell({
+                    rowIndex: nextRow!,
+                    colKey: nextCol,
+                })
+
+                return
+            }
+        }
+
+        // Handle Tab key for indenting/outdenting
+        if (keyEvent.key === 'Tab' && node?.data) {
             keyEvent.preventDefault()
             keyEvent.stopPropagation()
 
