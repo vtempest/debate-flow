@@ -145,6 +145,8 @@ export function MarkdownEditor({
   // Auto-save timer
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
   const lastSavedContent = useRef<string>(originalContent ?? content);
+  // Track previous content prop to detect when switching to a different document
+  const prevContentProp = useRef<string>(content);
 
   // Store callback in ref to avoid it being a dependency
   const onUnsavedChangeRef = useRef(onUnsavedChange);
@@ -519,9 +521,27 @@ export function MarkdownEditor({
     };
   }, [hasChanges, editorInstance, readOnly, autoSaveInterval, localStorageKey, onSave, htmlToMarkdown]);
 
-  // Update editor content when external content changes (but not if we have unsaved local changes)
+  // Update editor content when external content changes
   useEffect(() => {
-    if (editor && !hasChanges) {
+    if (!editor) return;
+
+    // Check if we're switching to a completely different document
+    const isNewDocument = content !== prevContentProp.current;
+
+    if (isNewDocument) {
+      // Switching to a new speech document - always load the new content
+      const newHtml = marked.parse(content || "", { async: false }) as string;
+      editor.commands.setContent(newHtml);
+
+      // Reset state for the new document
+      setHasChanges(false);
+      savedContent.current = content;
+      lastSavedContent.current = content;
+      prevContentProp.current = content;
+      normalizedContent.current = null;
+      isInitializing.current = true;
+    } else if (!hasChanges) {
+      // Same document but external update (no local changes) - update if different
       const newHtml = marked.parse(content || "", { async: false }) as string;
       const currentHtml = editor.getHTML();
 
